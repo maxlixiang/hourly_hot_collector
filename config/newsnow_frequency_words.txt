@@ -1,0 +1,24 @@
+# NewsNow quality filter frequency words v1
+
+[GLOBAL_FILTER]
+肖战
+王者
+观后感
+饭圈
+up主
+爱豆
+粉丝
+电竞
+二创
+塌房
+
+[WEAK_NEWS_PATTERNS]
+翻红
+打卡
+乐子
+回归
+一哥
+嗑
+群嘲
+约拍
+cos

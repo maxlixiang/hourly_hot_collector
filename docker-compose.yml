@@ -1,0 +1,14 @@
+services:
+  hourly-hot-collector:
+    build: .
+    container_name: hourly-hot-collector
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - ./db.py:/app/db.py:ro
+      - ./hourly_hot_collector.py:/app/hourly_hot_collector.py:ro
+    command: ["python", "hourly_hot_collector.py"]
