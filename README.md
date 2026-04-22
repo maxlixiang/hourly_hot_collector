@@ -79,6 +79,111 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+## 快速开始
+
+### 1. 准备配置
+
+复制并填写你自己的运行配置：
+
+```bash
+copy config\collector.example.env .env
+```
+
+重点确认这些路径和参数：
+- `NEWSNOW_BASE_URL`
+- `RSS_DATABASE_FILE`
+- `DB_FILE`
+- `RUN_MINUTE`
+- `TIMEZONE`
+
+如果你已经有自己的 `.env`，也可以直接沿用。
+
+### 2. 准备 RSS 源
+
+编辑：
+
+```text
+config/rss_sources.txt
+```
+
+当前格式示例：
+
+```python
+RSS_SOURCES = [
+    ("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
+    ("Reuters World", "https://feeds.reuters.com/Reuters/worldNews"),
+]
+```
+
+### 3. 初始化依赖
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 4. 运行采集器
+
+```bash
+python hourly_hot_collector.py
+```
+
+执行后会得到：
+- SQLite 数据库：`data/db/data_hub.db`
+- NewsNow Markdown：`data/markdown/newsnow/`
+- RSS Markdown：`data/markdown/rss/`
+- Raw JSON：`data/raw/newsnow/`、`data/raw/rss/`
+- 失败日志：`logs/failed_sources.log`
+
+### 5. 运行热点发现
+
+```bash
+python hot_topic_pipeline.py
+```
+
+执行后会得到：
+- `data/hot/newsnow/*.json`
+- `data/hot/rss/*.json`
+
+### 6. Docker 方式运行
+
+如果你更希望用容器运行：
+
+```bash
+docker-compose up --build
+```
+
+## 系统架构图
+
+```mermaid
+flowchart TD
+    A["NewsNow API"] --> B["Collectors Layer"]
+    A2["RSS Feeds"] --> B
+    C["config/rss_sources.txt"] --> B
+    C2[".env / rule files"] --> B
+
+    B --> D["Markdown Outputs<br/>data/markdown/newsnow<br/>data/markdown/rss"]
+    B --> E["Raw Outputs<br/>data/raw/newsnow<br/>data/raw/rss"]
+    B --> F["SQLite<br/>data/db/data_hub.db"]
+    B --> G["Logs<br/>logs/failed_sources.log"]
+
+    F --> H["Hot Topic Pipeline"]
+    C3["newsnow_frequency_words"] --> H
+    C4["newsnow_event_rules"] --> H
+
+    H --> I["Hot Cluster JSON<br/>data/hot/newsnow<br/>data/hot/rss"]
+
+    I --> J["Future Agent Layer"]
+    E --> J
+    F --> J
+
+    J --> K["Future Outputs"]
+    K --> K1["Signals"]
+    K --> K2["Reports"]
+    K --> K3["Briefs / Podcast Drafts"]
+```
+
 ## 运行采集器
 
 ```bash
@@ -127,6 +232,37 @@ python scripts/run_hot_pipeline.py
 - `app/rag/`
 - `app/schemas/`
 - `app/utils/`
+
+## 当前开发路线图
+
+### 已完成
+- NewsNow + RSS 双采集
+- Markdown / Raw JSON / SQLite 三层落盘
+- `fetch_runs` / `news_items` 结构化入库
+- RSS 增量窗口修复
+- Hot Topic Pipeline 从 SQLite 读取
+- `newsnow` / `rss` 分开聚类
+- NewsNow 外部规则过滤
+- NewsNow `news_event_score` 规则层
+- 项目目录第一阶段、第二阶段重构
+
+### 当前进行中
+- 将根目录脚本逐步迁入 `app/` 模块
+- 把 pipeline 内部逻辑继续拆到 `dedup / clustering / quality_filters`
+- 给 collector 与 pipeline 增加更真实的测试
+- 持续优化 NewsNow 热点簇质量
+
+### 下一阶段
+- 建立 `app/agents/` 的真实分析实现
+- 建立 `app/rag/` 的检索上下文层
+- 增加主题解释、信号评分、场景分析
+- 输出结构化分析结果到 `data/analysis/`
+
+### 更后续的方向
+- Telegram / 播客 / Dashboard 分发层
+- 历史热点对比
+- 主题演化追踪
+- 更稳定的版本发布与自动化流程
 
 ## 相关文档
 
