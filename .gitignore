@@ -15,6 +15,7 @@ data/analysis/
 data/cache/
 
 logs/
+gcm-diagnose.log
 
 output/
 output_rss/
