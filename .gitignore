@@ -13,6 +13,10 @@ data/markdown/
 data/hot/
 data/analysis/
 data/cache/
+data/knowledge/processed/documents.jsonl
+data/knowledge/processed/chunks.jsonl
+data/knowledge/indexes/*
+!data/knowledge/indexes/.gitkeep
 
 logs/
 gcm-diagnose.log

@@ -30,11 +30,11 @@ REPRESENTATIVE_TITLES_PER_CLUSTER = 3
 SUPPORTED_SOURCE_TYPES = ("newsnow", "rss")
 NEWSNOW_FREQUENCY_WORDS_FILE = "config/newsnow_frequency_words.txt"
 NEWSNOW_EVENT_RULES_FILE = "config/newsnow_event_rules.txt"
-NEWSNOW_EVENT_SCORE_THRESHOLD = 2
+NEWSNOW_EVENT_SCORE_THRESHOLD = 3
 
 PIPELINE_CONFIG = {
     "newsnow": {
-        "similarity_threshold": 0.42,
+        "similarity_threshold": 0.46,
         "min_title_length": 8,
         "enable_noise_filter": True,
         "enable_event_score": True,
@@ -444,6 +444,11 @@ def build_cluster_summaries(
         total_articles = len(cluster_articles)
         unique_sources = len({normalize_text(article["source_name"]) for article in cluster_articles})
         heat_score = total_articles + 0.75 * unique_sources + recency_score
+        cluster_articles_sorted = sorted(
+            cluster_articles,
+            key=lambda article: resolve_article_time(article) or now_dt,
+            reverse=True,
+        )
 
         center = cluster_embeddings.mean(axis=0)
         similarities = cosine_similarity_matrix_row(center, cluster_embeddings)
@@ -469,6 +474,19 @@ def build_cluster_summaries(
                 "latest_seen": max(article_times).strftime("%Y-%m-%d %H:%M:%S %z"),
                 "representative_titles": representative_titles,
                 "sources": sorted({normalize_text(article["source_name"]) for article in cluster_articles}),
+                "article_ids": [int(article["id"]) for article in cluster_articles_sorted],
+                "articles": [
+                    {
+                        "id": int(article["id"]),
+                        "title": article["title"],
+                        "url": article.get("url"),
+                        "source_name": article["source_name"],
+                        "published_at": article.get("published_at"),
+                        "fetched_at": article.get("fetched_at"),
+                        "resolved_time": article.get("resolved_time"),
+                    }
+                    for article in cluster_articles_sorted
+                ],
             }
         )
 

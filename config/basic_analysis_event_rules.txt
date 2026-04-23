@@ -1,0 +1,156 @@
+# Basic analysis event rules v1
+
+[GEOPOLITICS]
+伊朗
+美国
+停火
+谈判
+霍尔木兹
+油价
+制裁
+战争
+日本
+韩国
+台湾
+外交部
+Iran
+Trump
+ceasefire
+truce
+Hormuz
+war
+ships
+military
+sanctions
+Ukraine
+Russia
+Israel
+Lebanon
+Middle East => Middle East
+/\bUS\b/i => US
+/\bEU\b/i => EU
+/\bU\.S\.?\b/i => U.S.
+国台办
+台当局
+两岸
+台独
+赖清德
+斯威士兰
+NATO
+Orban
+Hungary
+Zelenskyy
+Europe
+Gaza
+Palestine
+Hamas
+cease-fire
+airstrike
+missile
+drone
+border
+election
+redistricting
+
+[MARKETS]
+美股
+油价
+财报
+股价
+净利润
+营收
+融资
+债券
+利率
+估值
+市场
+stocks
+market
+futures
+oil
+crude
+bonds
+rates
+yield
+earnings
+revenue
+shares
+Wall Street => Wall Street
+deficit
+growth
+forecast
+economy
+inflation
+GDP
+central bank
+Bundesbank
+debt
+loan
+cash burn
+deliveries
+revenue
+loss
+profit
+earnings
+Fed
+Federal Reserve
+Treasury
+tariff
+supply chain
+commodities
+private credit
+IPO
+valuation
+
+[TECH]
+人工智能
+芯片
+苹果
+特斯拉
+OpenAI
+英伟达
+电池
+机器人
+大模型
+模型
+算力
+artificial intelligence => artificial intelligence
+chip
+chips
+semiconductor
+Nvidia
+Google
+Apple
+Tesla
+TPU
+GPU
+robot
+/\bAI\b/i => AI
+AI model
+large model
+foundation model
+大模型
+Anthropic
+Microsoft
+Meta
+Amazon
+TSMC
+semiconductor
+data center
+cloud
+
+[RELIABLE_SOURCES]
+财联社
+华尔街见闻 最热 => 华尔街见闻
+参考消息
+澎湃新闻 热榜 => 澎湃新闻
+腾讯新闻
+36Kr
+卫星通讯社
+NYT World
+The Guardian World => The Guardian
+Bloomberg Markets => Bloomberg
+CNBC Business => CNBC
+MarketWatch
+Al Jazeera
+Reuters
