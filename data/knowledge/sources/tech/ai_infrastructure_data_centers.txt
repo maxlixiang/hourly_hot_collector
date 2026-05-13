@@ -1,0 +1,31 @@
+# title: AI 基础设施与数据中心投资逻辑
+# expert: internal_research_sample
+# date: 2026-04-23
+# source_type: manual_topic_card
+# original_url:
+# domain: tech
+# tags: ai infrastructure, data center, cloud, capex, compute
+
+## 本期核心事实
+
+AI 商业化正在推动数据中心、电力、网络和冷却系统成为关键约束。很多 AI 新闻表面看是模型或产品发布，底层实际上对应的是更高的算力和基础设施需求。
+
+## 主要观点
+
+判断 AI 基础设施是否进入新周期，不能只看模型热度，要看企业 CAPEX 是否持续、数据中心是否扩建、电力和网络瓶颈是否缓解。
+
+## 判断框架
+
+可以从四个维度观察：算力需求、资本开支、供电与冷却、客户真实付费意愿。只要其中两项明显转弱，市场对 AI 基建的乐观预期就会被重新定价。
+
+## 可能影响
+
+该主题会影响云厂商、服务器、网络设备、电力设施和散热产业链，也会影响科技板块估值结构。
+
+## 后续观察点
+
+关注 hyperscaler CAPEX 指引、数据中心建设进度、能源供应约束，以及企业 AI 服务的实际采用率。
+
+## 适用检索关键词
+
+AI infrastructure, data center, compute, cloud, capex, hyperscaler, power, cooling, networking

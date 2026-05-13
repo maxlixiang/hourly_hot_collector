@@ -1,0 +1,31 @@
+# title: 油价与地缘政治风险溢价
+# expert: internal_research_sample
+# date: 2026-04-23
+# source_type: manual_topic_card
+# original_url:
+# domain: markets
+# tags: oil, crude, risk premium, geopolitics, energy
+
+## 本期核心事实
+
+油价并不只反映供需，也反映运输风险、制裁预期和地缘政治风险溢价。只要关键产区或航道风险上升，市场通常先交易预期，再等待供给实质受损。
+
+## 主要观点
+
+对市场而言，真正重要的不是“是否已经中断供给”，而是“未来几周供给中断概率是否上升”。因此中东、俄罗斯、航运或制裁相关新闻常常先推升期货价格和能源股。
+
+## 判断框架
+
+看油价地缘政治风险，可以分成三层：产量是否受损、出口是否受阻、市场是否预期风险会持续。若三者同时强化，油价上行更有持续性。
+
+## 可能影响
+
+油价快速上行会影响通胀预期、航空航运成本、能源板块表现以及整体市场风险偏好。
+
+## 后续观察点
+
+关注原油期货曲线变化、主要航线风险、OPEC+表态，以及美国是否释放战略储备或政策信号。
+
+## 适用检索关键词
+
+oil, crude, futures, OPEC, shipping, Strait of Hormuz, sanctions, risk premium, energy market

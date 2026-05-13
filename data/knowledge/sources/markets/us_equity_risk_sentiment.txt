@@ -1,0 +1,31 @@
+# title: 美股风险偏好与情绪切换
+# expert: internal_research_sample
+# date: 2026-04-23
+# source_type: manual_topic_card
+# original_url:
+# domain: markets
+# tags: us equity, stocks, sentiment, wall street, valuation
+
+## 本期核心事实
+
+美股风险偏好变化通常先体现在高 beta 资产、成长股和主题交易上，然后才扩散到更广泛的指数表现。情绪转向时，市场会重新定价估值容忍度和盈利预期。
+
+## 主要观点
+
+当 Wall Street 对股票过于乐观而消费者或宏观数据偏弱时，市场容易出现预期脱节。短期内这可以继续推高行情，但一旦盈利、利率或宏观数据不支持，高估值板块的回撤往往更快。
+
+## 判断框架
+
+判断美股风险偏好，重点看三类线索：股指与高风险资产是否同步走强、市场是否重新追逐题材股、以及基本面数据是否能支撑当前估值。
+
+## 可能影响
+
+风险偏好上升有利于成长股、小盘股和高波动资产；风险偏好回落时，资金通常回流防御板块、现金流稳定资产或避险债券。
+
+## 后续观察点
+
+关注财报是否验证估值、利率预期是否变化、以及投机性资产是否继续领涨。
+
+## 适用检索关键词
+
+Wall Street, stocks, equity, sentiment, bubble, valuation, earnings, risk appetite, speculative stocks

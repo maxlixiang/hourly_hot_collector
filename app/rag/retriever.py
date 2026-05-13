@@ -29,12 +29,29 @@ EVENT_TYPE_DOMAIN_MAP = {
 }
 TOP_K = 5
 MIN_SCORE = 1
+TITLE_KEYWORD_WEIGHT = 3
+FACT_KEYWORD_WEIGHT = 2
+SUMMARY_KEYWORD_WEIGHT = 1
+TITLE_HIT_SCORE = 4
+TEXT_HIT_SCORE = 1
+PRIMARY_DOMAIN_BONUS = 2
+ALLOWED_DOMAIN_BONUS = 1
 ENGLISH_STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "to", "in", "on", "for", "with", "from", "by", "at",
     "is", "are", "was", "were", "be", "been", "this", "that", "these", "those", "it", "its",
     "as", "into", "about", "after", "before", "over", "under", "than", "also", "may", "could",
     "would", "should", "their", "them", "his", "her", "our", "your", "more", "most", "latest",
     "need", "needs", "watch", "point", "points", "possible", "impact", "impacts", "summary",
+    "two", "now", "right", "good", "live", "update", "updates", "world", "global", "says", "said",
+    "from", "past", "source", "sources", "title", "event", "events", "news", "related",
+}
+CHINESE_STOPWORDS = {
+    "展开", "来自", "过去", "可能", "影响", "需要", "关注", "后续", "是否", "出现", "变化",
+    "来源", "标题", "事件", "相关新闻", "主要", "包括", "代表性", "最新", "最早", "进展",
+    "信号", "围绕", "相关", "条新", "小时内", "文章量", "来源数", "后续观察", "社会关注",
+}
+LOW_SIGNAL_SUMMARY_PHRASES = {
+    "该事件围绕", "主要标题包括", "可能影响", "需要关注", "后续观察点",
 }
 
 
@@ -77,27 +94,83 @@ def find_latest_analysis_file(base_dir: Path, source_type: str) -> Path:
     raise FileNotFoundError(f"No basic analysis file found for source_type={source_type}")
 
 
+def clean_summary_text(summary: str) -> str:
+    cleaned = normalize_text(summary)
+    for phrase in LOW_SIGNAL_SUMMARY_PHRASES:
+        cleaned = cleaned.replace(phrase, " ")
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def is_title_like_fact(text: str) -> bool:
+    candidate = normalize_text(text)
+    if not candidate:
+        return False
+    if "标题为" in candidate or "标题包括" in candidate:
+        return True
+    if re.search(r"[A-Za-z]{3,}", candidate):
+        return True
+    if len(candidate) >= 10 and ("，" in candidate or "：" in candidate):
+        return True
+    return False
+
+
+def extract_title_like_text(text: str) -> str:
+    candidate = normalize_text(text)
+    if not candidate:
+        return ""
+    patterns = [
+        r"标题为[“\"']?(.*?)[”\"']?$",
+        r"标题包括[：: ]?[“\"']?(.*?)[”\"']?$",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, candidate)
+        if match:
+            extracted = normalize_text(match.group(1))
+            if extracted:
+                return extracted
+    return candidate
+
+
+def build_query_parts(analysis: dict[str, Any]) -> dict[str, list[str] | str]:
+    event_title = normalize_text(analysis.get("event_title"))
+    summary = clean_summary_text(normalize_text(analysis.get("summary")))
+    key_facts = [
+        extract_title_like_text(item)
+        for item in analysis.get("key_facts", [])
+        if is_title_like_fact(normalize_text(item))
+    ]
+    key_facts = [item for item in key_facts if item]
+    return {
+        "event_title": event_title,
+        "summary": summary,
+        "key_facts": key_facts,
+    }
+
+
 def build_query_text(analysis: dict[str, Any]) -> str:
-    parts: list[str] = [
-        normalize_text(analysis.get("event_title")),
-        normalize_text(analysis.get("event_type")),
-        normalize_text(analysis.get("summary")),
-        " ".join(normalize_text(item) for item in analysis.get("key_facts", [])),
-        " ".join(normalize_text(item) for item in analysis.get("possible_impacts", [])),
-        " ".join(normalize_text(item) for item in analysis.get("watch_points", [])),
+    parts = build_query_parts(analysis)
+    text_parts: list[str] = [
+        normalize_text(parts["event_title"]),
+        normalize_text(parts["summary"]),
+        " ".join(parts["key_facts"]),
     ]
-    return " ".join(part for part in parts if part)
+    return " ".join(part for part in text_parts if part)
 
 
-def extract_keywords(query_text: str) -> list[str]:
-    chinese_phrases = re.findall(r"[\u4e00-\u9fff]{2,8}", query_text)
-    english_words = [
-        word
-        for word in re.findall(r"[A-Za-z][A-Za-z\.\-]{1,}", query_text)
-        if word.lower() not in ENGLISH_STOPWORDS and len(word) >= 2
+def extract_keywords(text: str) -> list[str]:
+    chinese_phrases = [
+        phrase
+        for phrase in re.findall(r"[\u4e00-\u9fff]{2,12}", text)
+        if phrase not in CHINESE_STOPWORDS
     ]
+    english_words = []
+    for word in re.findall(r"[A-Za-z][A-Za-z\.\-]{1,}", text):
+        lowered = word.lower()
+        if lowered in ENGLISH_STOPWORDS or len(lowered) < 3:
+            continue
+        english_words.append(word)
+
     raw_keywords = chinese_phrases + english_words
-
     keywords: list[str] = []
     seen: set[str] = set()
     for keyword in raw_keywords:
@@ -110,8 +183,44 @@ def extract_keywords(query_text: str) -> list[str]:
     return keywords
 
 
+def build_weighted_keywords(analysis: dict[str, Any]) -> list[tuple[str, int]]:
+    parts = build_query_parts(analysis)
+    weighted_keywords: list[tuple[str, int]] = []
+    seen_weights: dict[str, int] = {}
+
+    def add_keywords(text: str, weight: int) -> None:
+        for keyword in extract_keywords(text):
+            key = keyword.lower()
+            seen_weights[key] = max(seen_weights.get(key, 0), weight)
+
+    add_keywords(normalize_text(parts["event_title"]), TITLE_KEYWORD_WEIGHT)
+    add_keywords(" ".join(parts["key_facts"]), FACT_KEYWORD_WEIGHT)
+    add_keywords(normalize_text(parts["summary"]), SUMMARY_KEYWORD_WEIGHT)
+
+    for key, weight in seen_weights.items():
+        weighted_keywords.append((key, weight))
+
+    keyword_map: dict[str, str] = {}
+    for text in (
+        normalize_text(parts["event_title"]),
+        " ".join(parts["key_facts"]),
+        normalize_text(parts["summary"]),
+    ):
+        for keyword in extract_keywords(text):
+            keyword_map.setdefault(keyword.lower(), keyword)
+
+    return [(keyword_map[key], weight) for key, weight in sorted(seen_weights.items(), key=lambda item: (-item[1], item[0]))]
+
+
 def allowed_domains_for_event_type(event_type: str) -> set[str]:
     return EVENT_TYPE_DOMAIN_MAP.get(normalize_text(event_type), {"general"})
+
+
+def primary_domain_for_event_type(event_type: str) -> str:
+    normalized = normalize_text(event_type)
+    if normalized in {"geopolitics", "markets", "tech", "general"}:
+        return normalized
+    return "general"
 
 
 def keyword_in_text(keyword: str, text: str) -> bool:
@@ -125,8 +234,9 @@ def keyword_in_text(keyword: str, text: str) -> bool:
 
 def score_chunk(
     chunk: dict[str, Any],
-    keywords: list[str],
+    keywords: list[tuple[str, int]],
     allowed_domains: set[str],
+    primary_domain: str,
 ) -> tuple[int, list[str]]:
     score = 0
     matched_keywords: list[str] = []
@@ -134,17 +244,19 @@ def score_chunk(
     title = normalize_text(chunk.get("title"))
     domain = normalize_text(chunk.get("domain"))
 
-    if domain in allowed_domains:
-        score += 2
+    if domain == primary_domain:
+        score += PRIMARY_DOMAIN_BONUS
+    elif domain in allowed_domains:
+        score += ALLOWED_DOMAIN_BONUS
 
     seen_matches: set[str] = set()
-    for keyword in keywords:
+    for keyword, weight in keywords:
         matched_in_text = keyword_in_text(keyword, text)
         matched_in_title = keyword_in_text(keyword, title)
         if matched_in_text:
-            score += 1
+            score += TEXT_HIT_SCORE * weight
         if matched_in_title:
-            score += 2
+            score += TITLE_HIT_SCORE * weight
         if matched_in_text or matched_in_title:
             lowered = keyword.lower()
             if lowered not in seen_matches:
@@ -161,37 +273,45 @@ def retrieve_chunks_for_analysis(
 ) -> list[dict[str, Any]]:
     event_type = normalize_text(analysis.get("event_type")) or "society"
     allowed_domains = allowed_domains_for_event_type(event_type)
-    query_text = build_query_text(analysis)
-    keywords = extract_keywords(query_text)
+    primary_domain = primary_domain_for_event_type(event_type)
+    keywords = build_weighted_keywords(analysis)
     candidates: list[dict[str, Any]] = []
 
-    for chunk in chunks:
-        domain = normalize_text(chunk.get("domain"))
-        if domain not in allowed_domains:
-            continue
+    def collect_candidates(filter_domains: set[str]) -> list[dict[str, Any]]:
+        current_candidates: list[dict[str, Any]] = []
+        for chunk in chunks:
+            domain = normalize_text(chunk.get("domain"))
+            if domain not in filter_domains:
+                continue
 
-        score, matched_keywords = score_chunk(chunk, keywords, allowed_domains)
-        if score < MIN_SCORE:
-            continue
+            score, matched_keywords = score_chunk(chunk, keywords, filter_domains, primary_domain)
+            if score < MIN_SCORE or not matched_keywords:
+                continue
 
-        candidates.append(
-            {
-                "chunk_id": chunk.get("chunk_id"),
-                "document_id": chunk.get("document_id"),
-                "domain": domain,
-                "title": normalize_text(chunk.get("title")),
-                "source_path": normalize_text(chunk.get("source_path")),
-                "chunk_index": chunk.get("chunk_index"),
-                "score": score,
-                "matched_keywords": matched_keywords,
-                "text": normalize_text(chunk.get("text")),
-            }
-        )
+            current_candidates.append(
+                {
+                    "chunk_id": chunk.get("chunk_id"),
+                    "document_id": chunk.get("document_id"),
+                    "domain": domain,
+                    "title": normalize_text(chunk.get("title")),
+                    "source_path": normalize_text(chunk.get("source_path")),
+                    "chunk_index": chunk.get("chunk_index"),
+                    "score": score,
+                    "matched_keywords": matched_keywords,
+                    "text": normalize_text(chunk.get("text")),
+                }
+            )
+        return current_candidates
+
+    candidates = collect_candidates(allowed_domains)
+    if event_type == "society" and not candidates:
+        candidates = collect_candidates({"geopolitics", "markets", "tech", "general"})
 
     candidates.sort(
         key=lambda item: (
             -int(item["score"]),
             -len(item["matched_keywords"]),
+            len(normalize_text(item["text"])),
             normalize_text(item["chunk_id"]),
         )
     )

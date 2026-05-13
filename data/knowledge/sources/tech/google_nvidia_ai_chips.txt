@@ -1,0 +1,31 @@
+# title: Google 与 Nvidia 的 AI 芯片竞争
+# expert: internal_research_sample
+# date: 2026-04-23
+# source_type: manual_topic_card
+# original_url:
+# domain: tech
+# tags: google, nvidia, ai, chips, tpu, gpu
+
+## 本期核心事实
+
+AI 基础设施竞争正在从模型能力延伸到算力供给和自研芯片。Google 推进 TPU、自有加速器和云端整合，目标是在训练和推理环节降低对 Nvidia 的单点依赖。
+
+## 主要观点
+
+Google 与 Nvidia 的竞争不是简单的新品对比，而是生态、成本和云平台绑定能力的竞争。谁能把芯片、软件栈和云服务打包得更好，谁更可能扩大企业采用率。
+
+## 判断框架
+
+分析这类芯片事件时，重点看三件事：性能是否提升、成本是否下降、生态是否更易迁移。只有三者同时成立，市场才会把它视为真正的竞争威胁。
+
+## 可能影响
+
+这会影响 AI 基础设施资本开支方向、云平台竞争、芯片供应链分工，以及相关公司的估值预期。
+
+## 后续观察点
+
+关注新芯片是否进入大规模部署、云客户是否转向、以及 Nvidia 是否通过软件生态继续保持优势。
+
+## 适用检索关键词
+
+Google, Nvidia, AI chips, TPU, GPU, inference, training, cloud, accelerator, semiconductor

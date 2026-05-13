@@ -1,0 +1,31 @@
+# title: 全球风险事件通用分析框架
+# expert: internal_research_sample
+# date: 2026-04-23
+# source_type: manual_topic_card
+# original_url:
+# domain: general
+# tags: framework, risk, signals, analysis
+
+## 本期核心事实
+
+很多热点新闻是否值得长期跟踪，关键不在标题热度，而在于它是否改变风险预期、政策路径、资产定价或产业节奏。
+
+## 主要观点
+
+一个事件是否重要，可以先问四个问题：它影响了谁、影响多久、影响通过什么路径传导、以及市场是否已经提前定价。
+
+## 判断框架
+
+通用分析框架可以拆成四层：事实层、机制层、影响层、观察层。先确认发生了什么，再确认为什么重要，然后判断可能影响什么，最后确定后续看什么信号。
+
+## 可能影响
+
+这个框架适合用来分析地缘政治、市场和科技热点，也适合作为 expert_agent 的基础背景知识。
+
+## 后续观察点
+
+观察新信息是否改变事件方向、是否有权威来源确认、以及是否已经对价格、政策或行为产生实际影响。
+
+## 适用检索关键词
+
+framework, risk, scenario, signals, policy, pricing, transmission, watch points
