@@ -52,7 +52,8 @@ def project_root() -> Path:
 
 
 def get_connection(db_path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(db_path)
+    db_uri = db_path.resolve().as_posix()
+    connection = sqlite3.connect(f"file:{db_uri}?mode=ro&immutable=1", uri=True)
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -67,7 +68,12 @@ def find_latest_hot_clusters_file(base_dir: Path, source_type: str) -> Path:
     if legacy_candidates:
         return legacy_candidates[-1]
 
-    raise FileNotFoundError(f"No hot cluster file found for source_type={source_type}")
+    raise FileNotFoundError(
+        f"No hot cluster JSON file found for source_type={source_type}. "
+        "Please run `python scripts/run_hot_pipeline.py` first. "
+        "Markdown files such as daily_hot_*.md / rss_hot_*.md are collector outputs, "
+        "not clustering outputs."
+    )
 
 
 def load_hot_clusters(path: Path) -> dict[str, Any]:

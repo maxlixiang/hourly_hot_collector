@@ -20,6 +20,9 @@ data/knowledge/indexes/*
 
 logs/
 gcm-diagnose.log
+.agent_runtime/
+data/agent/session_state.json
+data/agent/responses/*.json
 
 output/
 output_rss/

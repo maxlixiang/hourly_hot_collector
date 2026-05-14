@@ -1,196 +1,140 @@
 # hourly_hot_collector
 
-`hourly_hot_collector` 是一个面向热点采集与热点发现的 Python 单仓库项目，当前已经具备：
-- NewsNow + RSS 双采集
-- Markdown 快照输出
-- Raw JSON 落盘
-- SQLite 结构化存储
-- 热点聚类与热度排序
-- 为后续 Agent / RAG / 专家分析层预留架构空间
+`hourly_hot_collector` 是一个本地运行的新闻热点采集、热点发现和分析增强项目。
 
-## 项目当前能力
+它当前已经支持：
 
-### 1. 数据采集层
-- 按小时抓取 NewsNow 热榜快照
-- 抓取 RSS 增量新闻
-- 将结果写入 Markdown、Raw JSON、SQLite
-- 记录失败源日志
+- 抓取 NewsNow 热榜数据
+- 抓取 RSS 新闻源
+- 将新闻写入 SQLite
+- 输出 Markdown、raw JSON 和结构化数据库
+- 从已抓取新闻中发现热点簇
+- 构建热点上下文
+- 做基础规则分析、专家知识检索、专家报告和 LLM 成稿
+- 管理本地专家知识库 txt，并生成观点演化文件
 
-### 2. 数据存储层
-- 使用 SQLite 作为轻量数据库
-- 存储 `fetch_runs` 与 `news_items`
-- 为后续去重、事件跟踪、Agent 分析打基础
+这个项目不是一个 Web 服务，也不是一个大平台。它更像一个持续演进的本地新闻分析工作台：先稳定采集，再结构化存储，再逐步叠加热点发现、RAG、专家分析和最终表达层。
 
-### 3. 热点发现层
-- 直接从 SQLite 读取数据
-- 进行时间窗口过滤
-- 进行轻量去重
-- 分别对 `newsnow` 和 `rss` 做聚类
-- 输出热点簇 JSON
+## 主要入口
 
-### 4. NewsNow 质量控制
-- 外部 `frequency_words` 规则过滤
-- 外部 `news_event_score` 规则过滤
-- 更适合从平台热榜中提取“更像新闻事件”的标题
+根目录保留了几个兼容入口，方便直接运行：
 
-## 当前目录结构
+| 文件 | 作用 |
+| --- | --- |
+| `hourly_hot_collector.py` | 抓新闻。运行 NewsNow + RSS 采集，写 Markdown、raw JSON、SQLite。 |
+| `hot_topic_pipeline.py` | 从已抓取的新闻里找热点。读取 SQLite，去重、聚类、排序，输出热点簇。 |
+| `cluster_context_builder.py` | 根据热点簇回查 SQLite，构建给 Agent 使用的上下文包。 |
+| `db.py` | SQLite 存储层兼容入口，真实实现位于 `app/storage/db.py`。 |
+| `main.py` | 简单主入口，目前调用采集器。 |
+
+推荐的新入口位于 `scripts/`：
+
+| 脚本 | 作用 |
+| --- | --- |
+| `scripts/run_collector.py` | 运行新闻采集器。 |
+| `scripts/run_hot_pipeline.py` | 运行热点发现 pipeline。 |
+| `scripts/run_context_builder.py` | 将热点簇转成 cluster context。 |
+| `scripts/run_basic_agent.py` | 基于规则生成基础分析报告。 |
+| `scripts/run_retriever.py` | 从知识库 chunks 中检索相关专家知识片段。 |
+| `scripts/run_expert_agent.py` | 生成规则增强版专家报告。 |
+| `scripts/run_llm_expert_writer.py` | 调用 LLM 或 fallback，生成更自然的最终分析稿。 |
+| `scripts/run_knowledge_ingest.py` | 将 `data/knowledge/sources/**/*.txt` 入库为 documents/chunks JSONL。 |
+| `scripts/run_knowledge_evolution.py` | 生成知识库观点层和观点演化层。 |
+
+## 项目结构
 
 ```text
 hourly_hot_collector/
 ├─ app/
-├─ config/
+│  ├─ collectors/        # NewsNow / RSS 采集逻辑
+│  ├─ pipelines/         # 热点发现、上下文构建
+│  ├─ agents/            # 基础分析、专家报告、LLM 成稿
+│  ├─ rag/               # 知识入库、检索、观点演化
+│  ├─ storage/           # SQLite 读写
+│  ├─ schemas/           # 预留数据结构定义
+│  └─ utils/             # 预留通用工具
+├─ config/               # RSS 源、过滤词、规则、示例 env
 ├─ data/
-├─ docs/
-├─ logs/
-├─ scripts/
-├─ tests/
-├─ hourly_hot_collector.py
-├─ hot_topic_pipeline.py
-├─ db.py
-└─ requirements.txt
+│  ├─ db/                # SQLite 数据库
+│  ├─ raw/               # 原始抓取数据
+│  ├─ markdown/          # Markdown 快照
+│  ├─ hot/               # 热点簇输出
+│  ├─ analysis/          # context / reports / llm reports
+│  └─ knowledge/         # 专家知识库 sources / processed / evolution
+├─ docs/                 # 架构、数据流、知识卡片等文档
+├─ logs/                 # 运行日志
+├─ scripts/              # 推荐运行入口
+├─ tests/                # 基础测试
+├─ .env                  # 本地运行配置
+├─ requirements.txt
+├─ Dockerfile
+└─ docker-compose.yml
 ```
 
-关键目录说明：
-- `app/`：正在逐步沉淀为正式模块结构
-- `config/`：运行配置、规则文件、示例 env
-- `data/db/`：SQLite 数据库
-- `data/raw/`：原始 JSON 数据
-- `data/markdown/`：Markdown 输出
-- `data/hot/`：热点发现输出
-- `logs/`：运行日志与失败日志
-- `docs/`：架构、数据流、输入输出与发布规则文档
+## 安装
 
-## 配置文件
+建议使用 Python 3.11 或更新版本。
 
-主要配置来自项目根目录的 `.env`。
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-当前常用配置文件包括：
-- `config/rss_sources.txt`
-- `config/newsnow_frequency_words.txt`
-- `config/newsnow_event_rules.txt`
+## 配置
+
+主要配置在项目根目录 `.env` 中。
+
+可以参考：
+
 - `config/collector.example.env`
 - `config/pipeline.example.env`
 
-## 安装依赖
+RSS 源配置：
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+- `config/rss_sources.txt`
+
+NewsNow 质量规则：
+
+- `config/newsnow_frequency_words.txt`
+- `config/newsnow_event_rules.txt`
+
+基础分析事件规则：
+
+- `config/basic_analysis_event_rules.txt`
+
+如果要启用 LLM 最终写作层，需要在 `.env` 中配置：
+
+```env
+LLM_EXPERT_WRITER_API_KEY=
+LLM_EXPERT_WRITER_BASE_URL=
+LLM_EXPERT_WRITER_MODEL=
+LLM_EXPERT_WRITER_TIMEOUT=90
+LLM_EXPERT_WRITER_TEMPERATURE=0.4
 ```
 
-## 快速开始
+`LLM_EXPERT_WRITER_BASE_URL` 使用 OpenAI-compatible Chat Completions 协议，例如 DeepSeek 可配置为：
 
-### 1. 准备配置
-
-复制并填写你自己的运行配置：
-
-```bash
-copy config\collector.example.env .env
+```env
+LLM_EXPERT_WRITER_BASE_URL=https://api.deepseek.com
 ```
 
-重点确认这些路径和参数：
-- `NEWSNOW_BASE_URL`
-- `RSS_DATABASE_FILE`
-- `DB_FILE`
-- `RUN_MINUTE`
-- `TIMEZONE`
+## 典型运行流程
 
-如果你已经有自己的 `.env`，也可以直接沿用。
-
-### 2. 准备 RSS 源
-
-编辑：
-
-```text
-config/rss_sources.txt
-```
-
-当前格式示例：
-
-```python
-RSS_SOURCES = [
-    ("Ars Technica", "https://feeds.arstechnica.com/arstechnica/index"),
-    ("Reuters World", "https://feeds.reuters.com/Reuters/worldNews"),
-]
-```
-
-### 3. 初始化依赖
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 4. 运行采集器
+### 1. 抓取新闻
 
 ```bash
 python hourly_hot_collector.py
 ```
 
-执行后会得到：
-- SQLite 数据库：`data/db/data_hub.db`
-- NewsNow Markdown：`data/markdown/newsnow/`
-- RSS Markdown：`data/markdown/rss/`
-- Raw JSON：`data/raw/newsnow/`、`data/raw/rss/`
-- 失败日志：`logs/failed_sources.log`
-
-### 5. 运行热点发现
+或：
 
 ```bash
-python hot_topic_pipeline.py
+python scripts/run_collector.py
 ```
 
-执行后会得到：
-- `data/hot/newsnow/*.json`
-- `data/hot/rss/*.json`
+输出包括：
 
-### 6. Docker 方式运行
-
-如果你更希望用容器运行：
-
-```bash
-docker-compose up --build
-```
-
-## 系统架构图
-
-```mermaid
-flowchart TD
-    A["NewsNow API"] --> B["Collectors Layer"]
-    A2["RSS Feeds"] --> B
-    C["config/rss_sources.txt"] --> B
-    C2[".env / rule files"] --> B
-
-    B --> D["Markdown Outputs<br/>data/markdown/newsnow<br/>data/markdown/rss"]
-    B --> E["Raw Outputs<br/>data/raw/newsnow<br/>data/raw/rss"]
-    B --> F["SQLite<br/>data/db/data_hub.db"]
-    B --> G["Logs<br/>logs/failed_sources.log"]
-
-    F --> H["Hot Topic Pipeline"]
-    C3["newsnow_frequency_words"] --> H
-    C4["newsnow_event_rules"] --> H
-
-    H --> I["Hot Cluster JSON<br/>data/hot/newsnow<br/>data/hot/rss"]
-
-    I --> J["Future Agent Layer"]
-    E --> J
-    F --> J
-
-    J --> K["Future Outputs"]
-    K --> K1["Signals"]
-    K --> K2["Reports"]
-    K --> K3["Briefs / Podcast Drafts"]
-```
-
-## 运行采集器
-
-```bash
-python hourly_hot_collector.py
-```
-
-采集器运行后会写入：
 - `data/markdown/newsnow/`
 - `data/markdown/rss/`
 - `data/raw/newsnow/`
@@ -198,105 +142,157 @@ python hourly_hot_collector.py
 - `data/db/data_hub.db`
 - `logs/failed_sources.log`
 
-## 运行热点发现 Pipeline
+### 2. 发现热点
 
 ```bash
 python hot_topic_pipeline.py
 ```
 
-运行后会输出到：
-- `data/hot/newsnow/`
-- `data/hot/rss/`
-
-## 也可以使用脚本入口
+或：
 
 ```bash
-python scripts/run_collector.py
 python scripts/run_hot_pipeline.py
 ```
 
-## 当前架构状态
+输出：
 
-为了兼容现有运行方式，项目目前保留了根目录入口：
-- `hourly_hot_collector.py`
-- `hot_topic_pipeline.py`
-- `db.py`
+- `data/hot/newsnow/newsnow_hot_clusters_*.json`
+- `data/hot/rss/rss_hot_clusters_*.json`
 
-同时核心逻辑正在逐步迁移到：
-- `app/collectors/`
-- `app/pipelines/`
-- `app/storage/`
+### 3. 构建热点上下文
 
-未来预留的层包括：
-- `app/agents/`
-- `app/rag/`
-- `app/schemas/`
-- `app/utils/`
+```bash
+python scripts/run_context_builder.py
+```
 
-## 当前开发路线图
+输出：
 
-### 已完成
-- NewsNow + RSS 双采集
-- Markdown / Raw JSON / SQLite 三层落盘
-- `fetch_runs` / `news_items` 结构化入库
-- RSS 增量窗口修复
-- Hot Topic Pipeline 从 SQLite 读取
-- `newsnow` / `rss` 分开聚类
-- NewsNow 外部规则过滤
-- NewsNow `news_event_score` 规则层
-- 项目目录第一阶段、第二阶段重构
+- `data/analysis/context/newsnow_cluster_context_*.json`
+- `data/analysis/context/rss_cluster_context_*.json`
 
-### 当前进行中
-- 将根目录脚本逐步迁入 `app/` 模块
-- 把 pipeline 内部逻辑继续拆到 `dedup / clustering / quality_filters`
-- 给 collector 与 pipeline 增加更真实的测试
-- 持续优化 NewsNow 热点簇质量
+### 4. 生成基础分析
 
-### 下一阶段
-- 建立 `app/agents/` 的真实分析实现
-- 建立 `app/rag/` 的检索上下文层
-- 增加主题解释、信号评分、场景分析
-- 输出结构化分析结果到 `data/analysis/`
+```bash
+python scripts/run_basic_agent.py
+```
 
-### 更后续的方向
-- Telegram / 播客 / Dashboard 分发层
-- 历史热点对比
-- 主题演化追踪
-- 更稳定的版本发布与自动化流程
+输出：
 
-## 相关文档
+- `data/analysis/reports/newsnow_basic_analysis_*.json`
+- `data/analysis/reports/rss_basic_analysis_*.json`
+
+### 5. 检索专家知识
+
+先确保知识库已经入库：
+
+```bash
+python scripts/run_knowledge_ingest.py
+```
+
+然后运行检索：
+
+```bash
+python scripts/run_retriever.py
+```
+
+输出：
+
+- `data/analysis/retrieved_context/newsnow_retrieved_context_*.json`
+- `data/analysis/retrieved_context/rss_retrieved_context_*.json`
+
+### 6. 生成专家报告
+
+```bash
+python scripts/run_expert_agent.py
+```
+
+输出：
+
+- `data/analysis/expert_reports/newsnow_expert_report_*.json`
+- `data/analysis/expert_reports/rss_expert_report_*.json`
+
+### 7. 生成 LLM 成稿
+
+```bash
+python scripts/run_llm_expert_writer.py
+```
+
+如果 LLM 配置完整，会优先调用真实模型。如果配置缺失或调用失败，会自动 fallback，保证流程不中断。
+
+输出：
+
+- `data/analysis/llm_reports/newsnow_llm_report_*.json`
+- `data/analysis/llm_reports/rss_llm_report_*.json`
+
+### 8. 生成知识观点演化层
+
+```bash
+python scripts/run_knowledge_evolution.py
+```
+
+输出：
+
+- `data/knowledge/evolution/viewpoints.jsonl`
+- `data/knowledge/evolution/view_evolution.jsonl`
+
+## 知识库
+
+本项目只负责读取本地 txt 专家知识，不负责自动从视频或网页生成知识卡片。
+
+知识源目录：
+
+```text
+data/knowledge/sources/
+├─ geopolitics/
+├─ markets/
+├─ tech/
+└─ general/
+```
+
+推荐一个主题一个 txt 文件，不要把多个主题混进一个大文件。写法参考：
+
+- `docs/KNOWLEDGE_CARD_GUIDE.md`
+
+入库后会生成：
+
+- `data/knowledge/processed/documents.jsonl`
+- `data/knowledge/processed/chunks.jsonl`
+
+## Docker
+
+```bash
+docker-compose up --build
+```
+
+Docker 会挂载：
+
+- `data/`
+- `config/`
+- `logs/`
+
+## 文档
 
 - [架构说明](docs/ARCHITECTURE.md)
 - [数据流说明](docs/DATA_FLOW.md)
 - [Agent 规划](docs/AGENTS.md)
 - [输入输出规范](docs/IO_SPEC.md)
-- [Release / Tag 规则](docs/RELEASE.md)
+- [知识卡片指南](docs/KNOWLEDGE_CARD_GUIDE.md)
+- [发布规则](docs/RELEASE.md)
 
-## Release / Tag 规则
+## 开发状态
 
-当前采用轻量语义化版本规则：
-- `v0.1.0`
-- `v0.2.0`
-- `v1.0.0`
+当前项目仍处在快速迭代阶段。根目录入口会继续保留，方便运行；核心实现会逐步沉淀到 `app/` 下。
 
-版本含义：
-- `PATCH`：小修复、小调整
-- `MINOR`：新功能、非破坏升级
-- `MAJOR`：破坏性变更或运行方式调整
+当前主线是：
 
-详细规则见：
-[docs/RELEASE.md](docs/RELEASE.md)
+```text
+采集新闻
+  -> SQLite 入库
+  -> 热点发现
+  -> 上下文构建
+  -> 基础分析
+  -> 专家知识检索
+  -> 专家报告
+  -> LLM 成稿
+```
 
-## 项目定位
-
-这个项目当前不是一个“大而全”的新闻平台，而是一个：
-
-1. 可持续运行的热点采集系统  
-2. 可持续演进的热点发现系统  
-3. 为未来多专家 Agent / RAG 分析层准备的基础设施
-
-当前阶段重点是：
-- 保持采集稳定
-- 保持热点发现质量
-- 逐步整理工程结构
-- 为后续分析层提供干净的数据接口

@@ -72,7 +72,8 @@ def parse_datetime_object(value: str | None) -> datetime | None:
 
 
 def get_connection(db_path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(db_path)
+    db_uri = db_path.resolve().as_posix()
+    connection = sqlite3.connect(f"file:{db_uri}?mode=ro&immutable=1", uri=True)
     connection.row_factory = sqlite3.Row
     return connection
 
