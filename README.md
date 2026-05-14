@@ -40,6 +40,7 @@
 | `scripts/run_llm_expert_writer.py` | 调用 LLM 或 fallback，生成更自然的最终分析稿。 |
 | `scripts/run_knowledge_ingest.py` | 将 `data/knowledge/sources/**/*.txt` 入库为 documents/chunks JSONL。 |
 | `scripts/run_knowledge_evolution.py` | 生成知识库观点层和观点演化层。 |
+| `scripts/run_agents.py` | 新闻分析 Agent 对话入口。支持热点查询、来源整理、专家专题分析，并可自动调度前置流水线。 |
 
 ## 项目结构
 
@@ -235,6 +236,91 @@ python scripts/run_knowledge_evolution.py
 - `data/knowledge/evolution/viewpoints.jsonl`
 - `data/knowledge/evolution/view_evolution.jsonl`
 
+## 新闻分析 Agent v1
+
+当前项目已经有一个轻量对话式 Agent 入口：
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+```
+
+第一版只支持 3 个 `task_type`：
+
+| task_type | 作用 | 示例 |
+| --- | --- | --- |
+| `hot_news_query` | 查询最近热点新闻，基于本地 hot / report 文件返回热点列表。 | `告诉我过去24小时的10条热点新闻` |
+| `source_summary_request` | 对上一轮热点列表中的指定编号做来源整理。 | `请对1，2做内容整理和总结` |
+| `expert_topic_analysis` | 复用已有专家报告 / LLM 报告，对某个专题做专家视角分析。 | `从专家的角度，分析过去一周关于以色列和伊朗战争的相关新闻` |
+
+### Agent 自动流水线
+
+`run_agents.py` 默认会检查并复用前置产物。如果缺少必要文件，会自动运行相应脚本：
+
+```text
+hot_news_query
+  -> run_hot_pipeline
+  -> run_context_builder
+  -> run_basic_agent
+  -> run_knowledge_ingest
+  -> run_retriever
+  -> run_expert_agent
+  -> run_llm_expert_writer
+  -> run_agents
+```
+
+常用参数：
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+python scripts/run_agents.py --query "请对1，2做内容整理和总结"
+python scripts/run_agents.py --query "从专家的角度，分析过去一周关于以色列和伊朗战争的相关新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --no-auto-pipeline
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --force-pipeline
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --skip-llm
+```
+
+### 内容整理与原文读取
+
+`source_summary_request` 现在会优先尝试读取原文：
+
+```text
+文章 URL
+  -> Jina AI Reader: https://r.jina.ai/{文章URL}
+  -> 本地 HTML 正文提取兜底
+  -> SQLite summary / title 兜底
+```
+
+Jina Reader 用于降低导航栏、广告、页脚等无效信息进入“主要内容”的概率。读取成功时会显示：
+
+```text
+原文读取：成功（Jina Reader）
+```
+
+如果目标网站 403、网络不可用或正文提取失败，Agent 不会中断，会回退到本地数据库摘要，并在回答末尾输出“自检提示”。
+
+成功读取的原文缓存保存在：
+
+- `data/agent/article_cache/`
+
+该目录属于运行缓存，已被 git 忽略。
+
+### Agent 记忆与自检
+
+当前 memory 是轻量文件记忆：
+
+- 记住上一轮热点列表，供 `请对1，2做内容整理和总结` 继续引用。
+- 记录最近交互历史。
+- 优先写入 `data/agent/session_state.json`，如权限失败则回退到 `.agent_runtime/session_state.json`。
+
+Reflection v1 会检查：
+
+- 是否成功读取原文
+- 是否使用了数据库摘要兜底
+- 是否缺少 URL
+- 是否缺少可解析发布时间
+
+这一层目前只做安全提示，不会自动改写最终结论。
+
 ## 知识库
 
 本项目只负责读取本地 txt 专家知识，不负责自动从视频或网页生成知识卡片。
@@ -295,4 +381,3 @@ Docker 会挂载：
   -> 专家报告
   -> LLM 成稿
 ```
-

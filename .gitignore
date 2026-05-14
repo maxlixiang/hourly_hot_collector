@@ -23,6 +23,7 @@ gcm-diagnose.log
 .agent_runtime/
 data/agent/session_state.json
 data/agent/responses/*.json
+data/agent/article_cache/
 
 output/
 output_rss/

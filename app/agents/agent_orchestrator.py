@@ -14,7 +14,10 @@ from typing import Any
 
 from zoneinfo import ZoneInfo
 
+from app.agents.article_reader import compact_article_reader_result, read_article, summarize_article_reader_result
 from app.agents.agent_schemas import AgentPlan, AgentResponse, SUPPORTED_AGENT_SOURCE_TYPES, SUPPORTED_TASK_TYPES
+from app.agents.memory_store import MemoryStore
+from app.agents.reflection_checker import reflect_source_summary_results
 from app.agents.task_planner import plan_user_request
 
 
@@ -355,19 +358,20 @@ def resolve_source_types(source_type: str) -> list[str]:
 
 
 def save_session_state(base_dir: Path, payload: dict[str, Any]) -> Path | None:
-    path = base_dir / SESSION_STATE_FILE
-    fallback_path = base_dir / RUNTIME_FALLBACK_DIR / "session_state.json"
-    return try_write_json(path, payload, fallback_path)
+    return MemoryStore(base_dir).save(payload)
 
 
 def load_session_state(base_dir: Path) -> dict[str, Any]:
-    path = base_dir / SESSION_STATE_FILE
-    if not path.exists():
-        fallback_path = base_dir / RUNTIME_FALLBACK_DIR / "session_state.json"
-        if not fallback_path.exists():
-            return {}
-        return load_json(fallback_path)
-    return load_json(path)
+    return MemoryStore(base_dir).load()
+
+
+def record_agent_interaction(base_dir: Path, plan: AgentPlan, response: AgentResponse) -> Path | None:
+    return MemoryStore(base_dir).append_interaction(
+        task_type=plan.task_type,
+        query=plan.user_query,
+        answer=response.answer_text,
+        output_file=response.output_file,
+    )
 
 
 def build_response_path(base_dir: Path) -> Path:
@@ -508,14 +512,22 @@ def pick_representative_articles(articles: list[dict[str, Any]], max_sources: in
     return list(by_source.values())[:max_sources]
 
 
-def objective_article_summary(article: dict[str, Any]) -> str:
+def objective_article_summary(
+    article: dict[str, Any],
+    reader_result: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    if reader_result:
+        reader_summary = summarize_article_reader_result(reader_result)
+        if reader_summary:
+            return reader_summary, "article_reader"
+
     summary = strip_html(article.get("summary"))
     if summary:
-        return truncate_text(summary, 320)
+        return truncate_text(summary, 320), "database_summary"
     title = normalize_text(article.get("title"))
     if title:
-        return f"数据库中暂无正文摘要；当前可确认的新闻标题是：{title}"
-    return "数据库中暂无可用摘要。"
+        return f"数据库中暂无正文摘要；当前可确认的新闻标题是：{title}", "database_title"
+    return "数据库中暂无可用摘要。", "fallback"
 
 
 def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse:
@@ -532,7 +544,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
 
     item_by_index = {int(item["display_index"]): item for item in hot_items if item.get("display_index")}
     results: list[dict[str, Any]] = []
-    lines = ["好的。下面是你选择的热点对应的来源整理。v1 只使用本地数据库中的标题、URL、摘要/正文缓存，不额外加入专家判断。"]
+    lines = ["好的。下面是你选择的热点对应的来源整理。v1 会优先读取原文并做客观摘要，读取失败时回退到本地数据库摘要，不额外加入专家判断。"]
 
     for selected_index in selected_indexes:
         hot_item = item_by_index.get(int(selected_index))
@@ -540,7 +552,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             lines.append(f"\n新闻{selected_index}：没有在上一轮热点列表中找到这个编号。")
             continue
 
-        articles = pick_representative_articles(hot_item.get("articles", []))
+        articles = pick_representative_articles(hot_item.get("articles", []), max_sources=5)
         lines.append(f"\n新闻{selected_index}：{hot_item.get('event_title')}")
         if not articles:
             lines.append("暂时没有找到可展开的文章列表。")
@@ -551,10 +563,22 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
         for article in articles:
             source_name = normalize_text(article.get("source_name")) or "Unknown source"
             url = normalize_text(article.get("url"))
-            summary = objective_article_summary(article)
+            reader_result = read_article(url, base_dir) if url else {"status": "skipped", "error": "missing url"}
+            summary, summary_source = objective_article_summary(article, reader_result)
             published_time = article_published_time(article)
+            compact_reader = compact_article_reader_result(reader_result)
+            reader_status = compact_reader.get("status") or "unknown"
+            extraction_source = normalize_text(compact_reader.get("extraction_source"))
+            reader_note = "成功"
+            if reader_status != "success":
+                reader_note = f"失败：{compact_reader.get('error') or 'unknown error'}"
+            elif compact_reader.get("from_cache"):
+                reader_note = f"成功（缓存，{extraction_source or 'reader'}）"
+            elif extraction_source == "jina_reader":
+                reader_note = "成功（Jina Reader）"
             lines.append(f"- {source_name}：{url or '无 URL'}")
             lines.append(f"  Published time: {published_time}")
+            lines.append(f"  原文读取：{reader_note}")
             lines.append(f"  主要内容：{summary}")
             source_summaries.append(
                 {
@@ -565,6 +589,8 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
                     "published_at": normalize_text(article.get("published_at")),
                     "fetched_at": normalize_text(article.get("fetched_at")),
                     "summary": summary,
+                    "summary_source": summary_source,
+                    "article_reader": compact_reader,
                 }
             )
 
@@ -578,7 +604,17 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             }
         )
 
-    return AgentResponse(plan.task_type, "\n".join(lines), {"plan": plan.to_dict(), "items": results})
+    reflection_notes = reflect_source_summary_results(results)
+    if reflection_notes:
+        lines.append("\n自检提示：")
+        for note in reflection_notes:
+            lines.append(f"- {note}")
+
+    return AgentResponse(
+        plan.task_type,
+        "\n".join(lines),
+        {"plan": plan.to_dict(), "items": results, "reflection_notes": reflection_notes},
+    )
 
 
 def extract_query_keywords(query: str) -> list[str]:
@@ -791,7 +827,7 @@ def build_objective_news_fallback(topic: str, domain: str, rows: list[dict[str, 
         "下面只做新闻源层面的客观整理，不加入专家主观判断：",
     ]
     for index, row in enumerate(rows, start=1):
-        summary = objective_article_summary(row)
+        summary, _summary_source = objective_article_summary(row)
         lines.append(f"{index}. [{row.get('source_type')}] {row.get('source_name')}：{row.get('title')}")
         lines.append(f"   URL：{row.get('url')}")
         lines.append(f"   主要内容：{summary}")
@@ -887,6 +923,7 @@ def run_agent_once(
     actual_output_path = try_write_json(output_path, output_payload, build_fallback_response_path(base))
     if actual_output_path:
         response.output_file = str(actual_output_path)
+    record_agent_interaction(base, plan, response)
     return response
 
 

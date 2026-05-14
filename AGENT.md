@@ -40,6 +40,23 @@ documents.jsonl + chunks.jsonl
   -> data/knowledge/evolution/view_evolution.jsonl
 ```
 
+Interactive agent flow:
+
+```text
+user query
+  -> scripts/run_agents.py
+  -> task_planner
+  -> optional prerequisite pipeline scheduler
+  -> agent_orchestrator
+  -> response JSON under data/agent/responses or .agent_runtime/responses
+```
+
+The first agent version intentionally supports only three task types:
+
+- `hot_news_query`
+- `source_summary_request`
+- `expert_topic_analysis`
+
 ## Important Entry Points
 
 Root compatibility wrappers:
@@ -60,6 +77,7 @@ Preferred script entry points:
 - `scripts/run_llm_expert_writer.py`
 - `scripts/run_knowledge_ingest.py`
 - `scripts/run_knowledge_evolution.py`
+- `scripts/run_agents.py`
 
 ## Module Responsibilities
 
@@ -82,6 +100,11 @@ Preferred script entry points:
 
 `app/agents/`
 
+- `agent_orchestrator.py`: lightweight conversation orchestrator. It can auto-run missing prerequisite pipeline scripts, then dispatch the request by task type.
+- `task_planner.py`: rule-based planner for `hot_news_query`, `source_summary_request`, and `expert_topic_analysis`.
+- `article_reader.py`: objective article reader for source summaries. It tries Jina AI Reader first, then local HTML extraction, then caller-side SQLite fallback.
+- `memory_store.py`: lightweight file-backed memory for latest hot list and recent interactions.
+- `reflection_checker.py`: small self-check helpers for source summary and expert-analysis responses.
 - `basic_analysis_agent.py`: rule-based analysis from cluster context.
 - `expert_agent.py`: rule/template expert report from context + analysis + retrieved context.
 - `llm_expert_writer.py`: final expression layer. Uses OpenAI-compatible chat completions if configured, otherwise fallback.
@@ -121,9 +144,55 @@ Important output locations:
 - `data/analysis/llm_reports/`
 - `data/knowledge/processed/`
 - `data/knowledge/evolution/`
+- `data/agent/session_state.json`
+- `data/agent/responses/`
+- `data/agent/article_cache/`
+- `.agent_runtime/` fallback files when `data/agent/` is not writable
 - `logs/failed_sources.log`
 
 Generated outputs are usually ignored by git, except curated knowledge source txt files under `data/knowledge/sources/`.
+
+## Interactive Agent Notes
+
+`scripts/run_agents.py` is now the user-facing agent entry point.
+
+Supported examples:
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+python scripts/run_agents.py --query "请对1，2做内容整理和总结"
+python scripts/run_agents.py --query "从专家的角度，分析过去一周关于以色列和伊朗战争的相关新闻"
+```
+
+Useful flags:
+
+- `--no-auto-pipeline`: do not run missing prerequisite scripts.
+- `--force-pipeline`: regenerate prerequisite outputs before answering.
+- `--skip-llm`: skip the LLM writer during automatic pipeline preparation.
+- `--json`: print the full structured response.
+
+Prerequisite scheduling:
+
+- `source_summary_request` uses the previous hot-news session state and does not run the full pipeline automatically.
+- `hot_news_query` can run/reuse hot topic, context, basic analysis, knowledge ingestion, retriever, expert report, and LLM writer outputs.
+- `expert_topic_analysis` can run/reuse the same analysis chain, then searches generated expert/LLM reports.
+
+Source-summary behavior:
+
+```text
+article URL
+  -> https://r.jina.ai/{article URL}
+  -> local HTML extraction fallback
+  -> SQLite summary/title fallback
+```
+
+Notes:
+
+- Jina Reader is preferred because it removes much of the navigation/ad/footer boilerplate from news pages.
+- `article_reader.py` only caches successful reads. Failed network/403 attempts are not cached.
+- Cache version is controlled by `EXTRACTOR_VERSION`; bump it when changing extraction semantics.
+- The final answer must stay objective for `source_summary_request`: no expert interpretation, no subjective embellishment.
+- `reflection_checker.py` may append self-check notes when source reads fail or summaries fall back to local data.
 
 ## LLM Writer Notes
 
@@ -219,6 +288,12 @@ Run knowledge evolution:
 python scripts/run_knowledge_evolution.py
 ```
 
+Run the interactive agent:
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+```
+
 ## Verification
 
 For small code changes, at minimum run targeted compile checks:
@@ -250,6 +325,7 @@ $env:PYTHONDONTWRITEBYTECODE='1'; python -m py_compile path/to/file.py
 - Keep root wrappers working.
 - Preserve output schemas unless the user explicitly asks for schema changes.
 - Do not commit generated database, logs, or large runtime outputs unless the user explicitly asks.
+- Do not commit `data/agent/article_cache/`, `data/agent/responses/*.json`, or `.agent_runtime/`.
 - Use `apply_patch` for manual edits.
 
 ## Known Caveats
@@ -303,6 +379,23 @@ documents.jsonl + chunks.jsonl
   -> data/knowledge/evolution/view_evolution.jsonl
 ```
 
+交互式 Agent 数据流是：
+
+```text
+用户问题
+  -> scripts/run_agents.py
+  -> task_planner
+  -> 可选前置流水线调度器
+  -> agent_orchestrator
+  -> data/agent/responses 或 .agent_runtime/responses 下的响应 JSON
+```
+
+第一版 Agent 只支持三个 task type：
+
+- `hot_news_query`
+- `source_summary_request`
+- `expert_topic_analysis`
+
 ## 重要入口
 
 根目录兼容入口：
@@ -323,6 +416,7 @@ documents.jsonl + chunks.jsonl
 - `scripts/run_llm_expert_writer.py`
 - `scripts/run_knowledge_ingest.py`
 - `scripts/run_knowledge_evolution.py`
+- `scripts/run_agents.py`
 
 ## 模块职责
 
@@ -345,6 +439,11 @@ documents.jsonl + chunks.jsonl
 
 `app/agents/`
 
+- `agent_orchestrator.py`：轻量对话编排器。可以自动运行缺失的前置 pipeline 脚本，再按 task type 分发请求。
+- `task_planner.py`：规则版任务规划器，当前只识别 `hot_news_query`、`source_summary_request`、`expert_topic_analysis`。
+- `article_reader.py`：来源整理用的客观原文读取器。优先 Jina AI Reader，其次本地 HTML 提取，最后由调用方回退 SQLite 摘要。
+- `memory_store.py`：轻量文件记忆，保存上一轮热点列表和最近交互。
+- `reflection_checker.py`：回答自检工具，用于提示原文读取失败、摘要兜底、缺 URL、缺发布时间等问题。
 - `basic_analysis_agent.py`：基于规则，从 cluster context 生成基础分析。
 - `expert_agent.py`：基于 context + basic analysis + retrieved context 生成规则增强版专家报告。
 - `llm_expert_writer.py`：最终表达层。配置了 OpenAI-compatible chat completions 时调用 LLM，否则 fallback。
@@ -384,9 +483,55 @@ documents.jsonl + chunks.jsonl
 - `data/analysis/llm_reports/`
 - `data/knowledge/processed/`
 - `data/knowledge/evolution/`
+- `data/agent/session_state.json`
+- `data/agent/responses/`
+- `data/agent/article_cache/`
+- `.agent_runtime/`：当 `data/agent/` 不可写时的 fallback 目录
 - `logs/failed_sources.log`
 
 运行生成物通常不应提交到 git。例外是人工整理过的知识源 txt，即 `data/knowledge/sources/` 下的内容。
+
+## 交互式 Agent 注意事项
+
+`scripts/run_agents.py` 是当前面向用户的 Agent 入口。
+
+支持示例：
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+python scripts/run_agents.py --query "请对1，2做内容整理和总结"
+python scripts/run_agents.py --query "从专家的角度，分析过去一周关于以色列和伊朗战争的相关新闻"
+```
+
+常用参数：
+
+- `--no-auto-pipeline`：不自动运行缺失的前置脚本。
+- `--force-pipeline`：回答前强制重新生成前置产物。
+- `--skip-llm`：自动流水线中跳过 LLM writer。
+- `--json`：输出完整结构化响应。
+
+前置流水线调度：
+
+- `source_summary_request` 依赖上一轮热点列表的 session state，不自动运行完整 pipeline。
+- `hot_news_query` 可以自动运行或复用 hot topic、context、basic analysis、knowledge ingest、retriever、expert report、LLM writer。
+- `expert_topic_analysis` 会复用已有 expert / LLM report，并基于关键词匹配相关结果。
+
+来源整理链路：
+
+```text
+文章 URL
+  -> https://r.jina.ai/{文章 URL}
+  -> 本地 HTML 正文提取兜底
+  -> SQLite summary/title 兜底
+```
+
+注意：
+
+- 优先使用 Jina Reader，是为了减少导航栏、广告、页脚等无效信息进入“主要内容”。
+- `article_reader.py` 只缓存成功读取的结果。网络失败、403 等失败结果不缓存。
+- `EXTRACTOR_VERSION` 控制缓存版本；修改正文提取语义时要 bump 版本。
+- `source_summary_request` 必须保持客观来源整理口径：不加入专家判断，不做主观发挥。
+- `reflection_checker.py` 会在原文读取失败或摘要兜底时追加自检提示。
 
 ## LLM Writer 注意事项
 
@@ -482,6 +627,12 @@ python scripts/run_llm_expert_writer.py
 python scripts/run_knowledge_evolution.py
 ```
 
+运行交互式 Agent：
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+```
+
 ## 验证方式
 
 小改动至少运行定向编译检查：
@@ -513,6 +664,7 @@ $env:PYTHONDONTWRITEBYTECODE='1'; python -m py_compile path/to/file.py
 - 保持根目录兼容入口可用。
 - 除非用户明确要求，不要改输出 schema。
 - 不要提交生成的数据库、日志或大型运行产物。
+- 不要提交 `data/agent/article_cache/`、`data/agent/responses/*.json` 或 `.agent_runtime/`。
 - 手工编辑文件时使用 `apply_patch`。
 
 ## 已知注意点
