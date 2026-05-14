@@ -108,6 +108,9 @@ def fetch_articles_by_ids(db_path: Path, article_ids: list[int]) -> list[dict[st
             title,
             url,
             summary,
+            content,
+            content_fetch_status,
+            content_fetch_error,
             published_at,
             fetched_at,
             normalized_title,
@@ -133,6 +136,9 @@ def fetch_articles_by_ids(db_path: Path, article_ids: list[int]) -> list[dict[st
         article["title"] = normalize_text(article.get("title"))
         article["url"] = normalize_text(article.get("url")) or None
         article["summary"] = normalize_text(article.get("summary")) or None
+        article["content"] = normalize_text(article.get("content")) or None
+        article["content_fetch_status"] = normalize_text(article.get("content_fetch_status")) or None
+        article["content_fetch_error"] = normalize_text(article.get("content_fetch_error")) or None
         article["published_at"] = normalize_text(article.get("published_at")) or None
         article["fetched_at"] = normalize_text(article.get("fetched_at")) or None
         article["normalized_title"] = normalize_text(article.get("normalized_title")) or None

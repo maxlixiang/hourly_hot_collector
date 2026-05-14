@@ -5,24 +5,25 @@ import argparse
 import html
 import json
 import re
-import sqlite3
 import subprocess
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from zoneinfo import ZoneInfo
 
-from app.agents.article_reader import compact_article_reader_result, read_article, summarize_article_reader_result
 from app.agents.agent_schemas import AgentPlan, AgentResponse, SUPPORTED_AGENT_SOURCE_TYPES, SUPPORTED_TASK_TYPES
 from app.agents.memory_store import MemoryStore
 from app.agents.reflection_checker import reflect_source_summary_results
 from app.agents.task_planner import plan_user_request
+from app.tools.article_reader import compact_article_reader_result, read_article, summarize_article_reader_result
+from app.tools.article_reader.reader import build_text_excerpt, infer_content_quality
+from app.tools.article_reader.source_policies import resolve_source_policy
+from app.tools.news_search import search_news
 
 
 TIMEZONE = "Asia/Shanghai"
-DB_FILE = "data/db/data_hub.db"
 AGENT_DATA_DIR = "data/agent"
 AGENT_RESPONSE_DIR = "data/agent/responses"
 SESSION_STATE_FILE = "data/agent/session_state.json"
@@ -551,6 +552,61 @@ def content_fetch_reason(reader_result: dict[str, Any], summary_source: str) -> 
     return summary_source
 
 
+def rss_content_reader_result(article: dict[str, Any], policy_reason: str) -> dict[str, Any]:
+    text = strip_html(article.get("content"))
+    if not text:
+        return {
+            "status": "failed",
+            "content_fetch_status": "summary_only",
+            "content_quality": "none",
+            "http_status": None,
+            "error": policy_reason or "rss_content policy set but stored RSS content is empty",
+            "from_cache": False,
+        }
+    return {
+        "status": "success",
+        "content_fetch_status": "success",
+        "content_quality": infer_content_quality(text),
+        "http_status": None,
+        "error": "",
+        "title": normalize_text(article.get("title")),
+        "text": text,
+        "text_excerpt": build_text_excerpt(text),
+        "char_count": len(text),
+        "extraction_source": "rss_content_encoded",
+        "from_cache": False,
+    }
+
+
+def policy_disabled_reader_result(policy_reason: str) -> dict[str, Any]:
+    return {
+        "status": "skipped",
+        "content_fetch_status": "summary_only",
+        "content_quality": "none",
+        "http_status": None,
+        "error": policy_reason or "article reading disabled for this RSS source",
+        "from_cache": False,
+    }
+
+
+def read_article_with_source_policy(article: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+    url = normalize_text(article.get("url"))
+    if normalize_text(article.get("source_type")) != "rss":
+        return read_article(url, base_dir) if url else {"status": "skipped", "error": "missing url"}
+
+    policy = resolve_source_policy(
+        base_dir,
+        source_id=normalize_text(article.get("source_id")),
+    )
+    article_reading = normalize_text(policy.get("article_reading"))
+    policy_reason = normalize_text(policy.get("reason"))
+    if article_reading == "rss_content":
+        return rss_content_reader_result(article, policy_reason)
+    if article_reading == "disabled":
+        return policy_disabled_reader_result(policy_reason)
+    return read_article(url, base_dir) if url else {"status": "skipped", "error": "missing url"}
+
+
 def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse:
     session = load_session_state(base_dir)
     hot_items = session.get("last_hot_news", [])
@@ -584,7 +640,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
         for article in articles:
             source_name = normalize_text(article.get("source_name")) or "Unknown source"
             url = normalize_text(article.get("url"))
-            reader_result = read_article(url, base_dir) if url else {"status": "skipped", "error": "missing url"}
+            reader_result = read_article_with_source_policy(article, base_dir)
             summary, summary_source = objective_article_summary(article, reader_result)
             published_time = article_published_time(article)
             compact_reader = compact_article_reader_result(reader_result)
@@ -770,44 +826,6 @@ def score_report_item(item: dict[str, Any], keywords: list[str]) -> int:
     return score
 
 
-def query_sqlite_for_topic(base_dir: Path, keywords: list[str], window_hours: int, limit: int = 12) -> list[dict[str, Any]]:
-    db_path = base_dir / DB_FILE
-    if not db_path.exists() or not keywords:
-        return []
-
-    cutoff = now_dt() - timedelta(hours=max(1, window_hours))
-    cutoff_text = cutoff.strftime("%Y-%m-%d %H:%M:%S %z")
-    keyword_params = [f"%{keyword}%" for keyword in keywords[:8]]
-    clauses = []
-    params: list[Any] = [cutoff_text, cutoff_text]
-    for _ in keyword_params:
-        clauses.append("(LOWER(title) LIKE ? OR LOWER(COALESCE(summary, '')) LIKE ?)")
-    for keyword_param in keyword_params:
-        params.extend([keyword_param, keyword_param])
-    params.append(limit)
-
-    query = f"""
-        SELECT id, source_type, source_name, title, url, summary, published_at, fetched_at
-        FROM news_items
-        WHERE (
-            (published_at IS NOT NULL AND TRIM(published_at) != '' AND published_at >= ?)
-            OR ((published_at IS NULL OR TRIM(published_at) = '') AND fetched_at >= ?)
-        )
-          AND ({' OR '.join(clauses)})
-        ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC
-        LIMIT ?
-    """
-
-    db_uri = db_path.resolve().as_posix()
-    connection = sqlite3.connect(f"file:{db_uri}?mode=ro&immutable=1", uri=True)
-    connection.row_factory = sqlite3.Row
-    try:
-        rows = connection.execute(query, params).fetchall()
-    finally:
-        connection.close()
-    return [dict(row) for row in rows]
-
-
 def build_expert_answer_from_reports(topic: str, domain: str, matches: list[tuple[int, dict[str, Any]]]) -> str:
     lines = [f"我先把这个问题归类为：{domain}。下面是当前已生成专家报告中最相关的结果。"]
     for index, (score, item) in enumerate(matches[:3], start=1):
@@ -892,7 +910,13 @@ def run_expert_topic_analysis(base_dir: Path, plan: AgentPlan) -> AgentResponse:
             },
         )
 
-    rows = query_sqlite_for_topic(base_dir, keywords, window_hours)
+    rows = search_news(
+        base_dir=base_dir,
+        query=f"{plan.user_query} {topic}",
+        window_hours=window_hours,
+        source_type=normalize_text(params.get("source_type")) or "mixed",
+        limit=12,
+    )
     answer = build_objective_news_fallback(topic, domain, rows)
     return AgentResponse(
         plan.task_type,

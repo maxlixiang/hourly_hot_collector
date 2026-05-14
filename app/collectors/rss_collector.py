@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import ast
+import html
+import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
@@ -30,6 +32,14 @@ from app.collectors.collector_common import (
     write_json,
 )
 from app.storage.db import bulk_insert_news_items, get_previous_successful_run_finished_at
+from app.tools.article_reader.source_policies import resolve_source_policy
+
+
+def strip_html(value: Any) -> str:
+    text = html.unescape(normalize_text(value))
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
 
 
 def load_rss_sources() -> list[RssSource]:
@@ -93,12 +103,14 @@ def parse_rss_entries(xml_text: str) -> list[dict[str, str]]:
                 element_text(entry, "published") or element_text(entry, "updated")
             )
             description = element_text(entry, "summary", "content")
+            content_encoded = element_text(entry, "encoded")
             entries.append(
                 {
                     "title": title,
                     "link": link,
                     "pubDate": pub_date,
                     "description": description,
+                    "content_encoded": content_encoded,
                 }
             )
         return entries
@@ -114,12 +126,14 @@ def parse_rss_entries(xml_text: str) -> list[dict[str, str]]:
             element_text(item, "pubDate", "date", "published", "updated")
         )
         description = element_text(item, "description", "encoded", "summary")
+        content_encoded = element_text(item, "encoded")
         entries.append(
             {
                 "title": title,
                 "link": link,
                 "pubDate": pub_date,
                 "description": description,
+                "content_encoded": content_encoded,
             }
         )
 
@@ -211,6 +225,18 @@ def standardize_rss_item(
 ) -> dict[str, Any]:
     title = normalize_text(item.get("title")) or "无标题"
     url = normalize_text(item.get("link"))
+    policy = resolve_source_policy(Path("."), source_url=source.url)
+    article_reading = normalize_text(policy.get("article_reading"))
+    content = None
+    content_fetch_status = "pending"
+    content_fetch_error = None
+    if article_reading == "rss_content":
+        content = strip_html(item.get("content_encoded"))
+        content_fetch_status = "success" if content else "summary_only"
+        content_fetch_error = None if content else "rss_content policy set but content:encoded was empty"
+    elif article_reading == "disabled":
+        content_fetch_status = "summary_only"
+        content_fetch_error = normalize_text(policy.get("reason")) or "article reading disabled for this RSS source"
     return {
         "fetch_run_id": fetch_run_id,
         "source_type": "rss",
@@ -222,9 +248,9 @@ def standardize_rss_item(
         "published_at": parse_possible_datetime(item.get("pubDate")),
         "fetched_at": fetched_at,
         "normalized_title": normalize_title(title),
-        "content": None,
-        "content_fetch_status": "pending",
-        "content_fetch_error": None,
+        "content": content,
+        "content_fetch_status": content_fetch_status,
+        "content_fetch_error": content_fetch_error,
         "raw_file_path": str(raw_file_path),
         "raw_source_index": raw_source_index,
         "raw_item_index": raw_item_index,

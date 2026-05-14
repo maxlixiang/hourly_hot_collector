@@ -1,0 +1,30 @@
+RSS_SOURCE_POLICIES = {
+    "https://moxie.foxnews.com/google-publisher/world.xml": {
+        "article_reading": "rss_content",
+        "reason": "RSS items include full text in content:encoded.",
+    },
+    "https://rss.nytimes.com/services/xml/rss/nyt/World.xml": {
+        "article_reading": "disabled",
+        "reason": "Direct article fetch returns 403; keep RSS for headline/summary discovery.",
+    },
+    "https://rss.nytimes.com/services/xml/rss/nyt/US.xml": {
+        "article_reading": "disabled",
+        "reason": "Direct article fetch returns 403; keep RSS for headline/summary discovery.",
+    },
+    "https://feeds.bloomberg.com/markets/news.rss": {
+        "article_reading": "disabled",
+        "reason": "Keep RSS for headline/summary discovery; do not spend article-reader time on Bloomberg pages.",
+    },
+    "https://feeds.marketwatch.com/marketwatch/topstories/": {
+        "article_reading": "disabled",
+        "reason": "Direct article fetch returns 401; keep RSS for headline/summary discovery.",
+    },
+    "https://feeds.a.dj.com/rss/RSSMarketsMain.xml": {
+        "article_reading": "disabled",
+        "reason": "Direct article fetch returns 401; keep RSS for market headline/summary discovery.",
+    },
+    "https://www.economist.com/finance-and-economics/rss.xml": {
+        "article_reading": "disabled",
+        "reason": "Direct article fetch returns 403; keep RSS for headline/summary discovery.",
+    },
+}

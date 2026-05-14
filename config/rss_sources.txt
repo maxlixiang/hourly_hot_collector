@@ -19,6 +19,11 @@ RSS_SOURCES = [
     ("The Economist - Finance", "https://www.economist.com/finance-and-economics/rss.xml"),
 
     # 地缘政治
+    ("HuffPost World News", "https://www.huffpost.com/section/world-news/feed"),
+    ("Los Angeles Times World Nation", "https://www.latimes.com/world-nation/rss2.0.xml"),
+    ("CNN Edition", "http://rss.cnn.com/rss/edition.rss"),
+    ("Yahoo Most Viewed", "https://news.yahoo.com/rss/mostviewed"),
+    ("Fox News World", "https://moxie.foxnews.com/google-publisher/world.xml"),
     ("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
     ("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
     ("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),

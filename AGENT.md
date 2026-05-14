@@ -102,7 +102,7 @@ Preferred script entry points:
 
 - `agent_orchestrator.py`: lightweight conversation orchestrator. It can auto-run missing prerequisite pipeline scripts, then dispatch the request by task type.
 - `task_planner.py`: rule-based planner for `hot_news_query`, `source_summary_request`, and `expert_topic_analysis`.
-- `article_reader.py`: objective article reader for source summaries. It tries Jina AI Reader first, then local HTML extraction, then caller-side SQLite fallback.
+- `article_reader.py`: compatibility wrapper. Do not add new extraction logic here.
 - `memory_store.py`: lightweight file-backed memory for latest hot list and recent interactions.
 - `reflection_checker.py`: small self-check helpers for source summary and expert-analysis responses.
 - `basic_analysis_agent.py`: rule-based analysis from cluster context.
@@ -118,9 +118,33 @@ Preferred script entry points:
 - `knowledge_store.py`: knowledge path constants.
 - `index_builder.py`: future placeholder.
 
+`app/tools/`
+
+- `article_reader/`: standalone URL-to-content tool used by the Agent source-summary flow.
+- `article_reader/reader.py`: main implementation. It tries direct HTML extraction with trafilatura first, then newspaper4k, Jina AI Reader, and local HTML extraction before letting the caller fall back to SQLite/RSS summaries.
+- `article_reader/schemas.py`: lightweight result schema types.
+- `article_reader/source_policies.py`: RSS source article-reading policy loader. It supports `enabled`, `rss_content`, and `disabled` source behavior.
+- `news_search/`: standalone SQLite topic search tool for recent `news_items`. It filters by query keywords, time window, and `source_type`, then ranks title hits before summary hits and newer items.
+- `news_search/sqlite_search.py`: exposes the stable interface `search_news(base_dir, query, window_hours=24, source_type="mixed", limit=20)`.
+- `news_search/query_parser.py`: lightweight Chinese continuous-term and English-word keyword extraction with simple stopword filtering.
+- `news_search/schemas.py`: lightweight result/query schema types.
+
+Future article extraction work should stay inside `app/tools/article_reader/`. The main Agent should only call the stable interface:
+
+```python
+from app.tools.article_reader import read_article
+```
+
+For SQLite topic fallback search, the main Agent should call:
+
+```python
+from app.tools.news_search import search_news
+```
+
 `config/`
 
 - `rss_sources.txt`: RSS source list.
+- `rss_source_policies.txt`: per-RSS-source article-reading policy. Keep blocked/paywalled but editorially useful feeds in `rss_sources.txt`, then mark article reading as `disabled` here.
 - `newsnow_frequency_words.txt`: NewsNow quality filtering words.
 - `newsnow_event_rules.txt`: NewsNow event-score rules.
 - `basic_analysis_event_rules.txt`: event classification and reliable-source rules.
@@ -180,22 +204,38 @@ Prerequisite scheduling:
 Source-summary behavior:
 
 ```text
-article URL
-  -> https://r.jina.ai/{article URL}
-  -> trafilatura / newspaper4k extraction when optional deps are installed
-  -> local HTML extraction fallback
-  -> SQLite summary/title fallback
+RSS source policy
+  -> enabled:
+       article URL
+         -> trafilatura
+         -> newspaper4k
+         -> Jina AI Reader: https://r.jina.ai/{article URL}
+         -> local HTML parser
+         -> SQLite/RSS summary or title fallback
+  -> rss_content:
+       use RSS item content:encoded directly, without visiting the article URL
+  -> disabled:
+       skip article reading and use RSS/SQLite summary or title
 ```
 
 Notes:
 
-- Jina Reader is preferred because it removes much of the navigation/ad/footer boilerplate from news pages.
+- `trafilatura` is now preferred. Sampling across the current RSS set showed it is usually cleaner than Jina Reader for body extraction. Jina remains a fallback layer.
 - `trafilatura` and `newspaper4k` are optional extractor layers. They are listed in requirements, but the code still skips them safely if unavailable.
-- `article_reader.py` only caches successful reads. Failed network/403 attempts are not cached.
+- `article_reader.py` only caches successful reads. Failed network/403 attempts and policy-disabled reads are not cached as full text.
 - Cache version is controlled by `EXTRACTOR_VERSION`; bump it when changing extraction semantics.
-- `content_fetch_status` should distinguish full text from summary-only fallbacks. Bloomberg/NYT/FT-style blocked pages should not be presented as full text.
+- `content_fetch_status` should distinguish full text from summary-only fallbacks. Bloomberg/NYT/MarketWatch/WSJ/Economist-style blocked pages should remain useful RSS signals, but should not be presented as full text.
+- Fox News World currently uses `rss_content` because its RSS items include usable body text in `content:encoded`.
 - The final answer must stay objective for `source_summary_request`: no expert interpretation, no subjective embellishment.
 - `reflection_checker.py` may append self-check notes when source reads fail or summaries fall back to local data.
+
+Recommended new-thread prompt for focused development:
+
+```text
+优化 article_reader 工具。
+请先阅读 AGENT.md 和 app/tools/article_reader/，
+只围绕正文提取模块开发，不要改主 Agent 流程。
+```
 
 ## LLM Writer Notes
 
@@ -444,7 +484,7 @@ documents.jsonl + chunks.jsonl
 
 - `agent_orchestrator.py`：轻量对话编排器。可以自动运行缺失的前置 pipeline 脚本，再按 task type 分发请求。
 - `task_planner.py`：规则版任务规划器，当前只识别 `hot_news_query`、`source_summary_request`、`expert_topic_analysis`。
-- `article_reader.py`：来源整理用的客观原文读取器。优先 Jina AI Reader，其次本地 HTML 提取，最后由调用方回退 SQLite 摘要。
+- `article_reader.py`：兼容转发层。不要在这里继续新增正文提取逻辑。
 - `memory_store.py`：轻量文件记忆，保存上一轮热点列表和最近交互。
 - `reflection_checker.py`：回答自检工具，用于提示原文读取失败、摘要兜底、缺 URL、缺发布时间等问题。
 - `basic_analysis_agent.py`：基于规则，从 cluster context 生成基础分析。
@@ -460,9 +500,23 @@ documents.jsonl + chunks.jsonl
 - `knowledge_store.py`：知识库路径常量。
 - `index_builder.py`：未来索引构建占位。
 
+`app/tools/`
+
+- `article_reader/`：独立 URL 正文读取工具，供 Agent 来源整理流程调用。
+- `article_reader/reader.py`：主实现。优先直接请求网页并用 trafilatura 提取正文，然后 newspaper4k、Jina AI Reader、本地 HTML parser，最后由调用方回退 SQLite/RSS 摘要。
+- `article_reader/schemas.py`：轻量输出结构类型定义。
+- `article_reader/source_policies.py`：RSS 源正文读取策略加载器，支持 `enabled`、`rss_content`、`disabled`。
+
+未来优化正文提取质量时，应只改 `app/tools/article_reader/`。主 Agent 只调用稳定接口：
+
+```python
+from app.tools.article_reader import read_article
+```
+
 `config/`
 
 - `rss_sources.txt`：RSS 源列表。
+- `rss_source_policies.txt`：RSS 源级正文读取策略。被 401/403/paywall 挡住但仍有新闻发现价值的源，应保留在 `rss_sources.txt`，并在这里标记为 `disabled`。
 - `newsnow_frequency_words.txt`：NewsNow 质量过滤词。
 - `newsnow_event_rules.txt`：NewsNow 事件打分规则。
 - `basic_analysis_event_rules.txt`：事件分类和可靠来源规则。
@@ -522,22 +576,38 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 来源整理链路：
 
 ```text
-文章 URL
-  -> https://r.jina.ai/{文章 URL}
-  -> 安装可选依赖后使用 trafilatura / newspaper4k 提取正文
-  -> 本地 HTML 正文提取兜底
-  -> SQLite summary/title 兜底
+RSS 源策略
+  -> enabled：
+       文章 URL
+         -> trafilatura
+         -> newspaper4k
+         -> Jina AI Reader: https://r.jina.ai/{文章 URL}
+         -> 本地 HTML parser
+         -> SQLite/RSS summary 或 title 兜底
+  -> rss_content：
+       不访问文章 URL，直接使用 RSS item 的 content:encoded
+  -> disabled：
+       跳过正文抓取，直接使用 RSS/SQLite 摘要或标题
 ```
 
 注意：
 
-- 优先使用 Jina Reader，是为了减少导航栏、广告、页脚等无效信息进入“主要内容”。
+- 现在优先使用 `trafilatura`。对当前 RSS 源抽样测试后，它整体比 Jina Reader 更适合正文分析；Jina Reader 保留为兜底层。
 - `trafilatura` 和 `newspaper4k` 是可选增强层。它们已写入 requirements，但如果当前环境没有安装，代码会安全跳过。
-- `article_reader.py` 只缓存成功读取的结果。网络失败、403 等失败结果不缓存。
+- `article_reader.py` 只缓存成功读取的结果。网络失败、403、策略禁用等结果不缓存为全文。
 - `EXTRACTOR_VERSION` 控制缓存版本；修改正文提取语义时要 bump 版本。
-- `content_fetch_status` 用来区分全文和摘要兜底。Bloomberg / NYT / FT 这类被 403、paywall 或授权限制挡住的页面，不要伪装成全文。
+- `content_fetch_status` 用来区分全文和摘要兜底。Bloomberg / NYT / MarketWatch / WSJ / Economist 这类被 401/403/paywall 或授权限制挡住的页面，应继续作为 RSS 新闻信号保留，但不要伪装成全文。
+- Fox News World 当前使用 `rss_content`，因为它的 RSS item 在 `content:encoded` 里提供可用正文。
 - `source_summary_request` 必须保持客观来源整理口径：不加入专家判断，不做主观发挥。
 - `reflection_checker.py` 会在原文读取失败或摘要兜底时追加自检提示。
+
+建议新对话中使用这个提示来专门开发该模块：
+
+```text
+优化 article_reader 工具。
+请先阅读 AGENT.md 和 app/tools/article_reader/，
+只围绕正文提取模块开发，不要改主 Agent 流程。
+```
 
 ## LLM Writer 注意事项
 

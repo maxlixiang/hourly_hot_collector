@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-"""Compatibility wrapper for the article reader tool.
-
-New development should happen in app/tools/article_reader/.
-"""
-
-from app.tools.article_reader import (
+from app.tools.article_reader.reader import (
     compact_article_reader_result,
     read_article,
     summarize_article_reader_result,
