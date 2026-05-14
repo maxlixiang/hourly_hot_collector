@@ -2,3 +2,5 @@ requests==2.32.3
 sentence-transformers==3.0.1
 scikit-learn>=1.6,<1.8
 python-dotenv>=1.0,<2.0
+trafilatura>=1.9,<2.0
+newspaper4k>=0.9,<1.0

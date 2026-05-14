@@ -13,16 +13,29 @@ from typing import Any
 import requests
 from zoneinfo import ZoneInfo
 
+try:
+    import trafilatura  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    trafilatura = None
+
+try:
+    from newspaper import Article  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    Article = None
+
 
 TIMEZONE = "Asia/Shanghai"
 ARTICLE_CACHE_DIR = "data/agent/article_cache"
 RUNTIME_FALLBACK_DIR = ".agent_runtime"
 DEFAULT_TIMEOUT_SECONDS = 8
 MAX_STORED_TEXT_CHARS = 6000
-EXTRACTOR_VERSION = "article_reader_v3_jina_first"
+EXTRACTOR_VERSION = "article_reader_v4_quality_chain"
 JINA_READER_BASE_URL = "https://r.jina.ai"
 JINA_READER_TIMEOUT_SECONDS = 20
 MIN_READER_TEXT_CHARS = 160
+FULL_TEXT_MIN_CHARS = 700
+PARTIAL_TEXT_MIN_CHARS = 220
+SUMMARY_ONLY_REASONS = ("403", "401", "forbidden", "paywall", "too little readable text")
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -202,6 +215,57 @@ def write_cached_article(base_dir: Path, url: str, payload: dict[str, Any]) -> P
     return None
 
 
+def infer_content_quality(text: str) -> str:
+    clean_len = len(normalize_text(text))
+    if clean_len >= FULL_TEXT_MIN_CHARS:
+        return "full_text"
+    if clean_len >= PARTIAL_TEXT_MIN_CHARS:
+        return "partial_text"
+    if clean_len > 0:
+        return "thin_text"
+    return "none"
+
+
+def infer_failure_status(error: Any, http_status: int | None = None) -> str:
+    error_text = normalize_text(error).lower()
+    if http_status in {401, 402, 403, 451}:
+        return "summary_only"
+    if any(reason in error_text for reason in SUMMARY_ONLY_REASONS):
+        return "summary_only"
+    return "failed"
+
+
+def success_result(
+    *,
+    url: str,
+    title: str,
+    text: str,
+    http_status: int | None,
+    extraction_source: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    clean_text = truncate_text(text, MAX_STORED_TEXT_CHARS)
+    payload = {
+        "url": url,
+        "status": "success",
+        "content_fetch_status": "success",
+        "content_quality": infer_content_quality(clean_text),
+        "http_status": http_status,
+        "error": "",
+        "title": truncate_text(title, 240),
+        "text": clean_text,
+        "text_excerpt": build_text_excerpt(clean_text),
+        "char_count": len(clean_text),
+        "extraction_source": extraction_source,
+        "extractor_version": EXTRACTOR_VERSION,
+        "fetched_at": now_text(),
+        "from_cache": False,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 BOILERPLATE_PATTERNS = (
     "skip links",
     "skip to content",
@@ -316,6 +380,57 @@ def extract_readable_html(html_text: str) -> tuple[str, str, str]:
     return title, text, source or "unknown"
 
 
+def extract_with_trafilatura(html_text: str, url: str) -> tuple[str, str]:
+    if trafilatura is None:
+        return "", ""
+    try:
+        metadata = trafilatura.extract_metadata(html_text, default_url=url)
+        title = normalize_text(getattr(metadata, "title", "")) if metadata else ""
+        text = trafilatura.extract(
+            html_text,
+            url=url,
+            include_comments=False,
+            include_tables=False,
+            output_format="txt",
+            favor_recall=True,
+        )
+    except Exception as exc:  # pragma: no cover - extractor-specific defensive guard
+        print(f"[WARN] trafilatura extraction failed for {url}: {exc}")
+        return "", ""
+    return title, normalize_text(text)
+
+
+def extract_with_newspaper(html_text: str, url: str) -> tuple[str, str]:
+    if Article is None:
+        return "", ""
+    try:
+        article = Article(url=url)
+        article.set_html(html_text)
+        article.parse()
+    except Exception as exc:  # pragma: no cover - extractor-specific defensive guard
+        print(f"[WARN] newspaper4k extraction failed for {url}: {exc}")
+        return "", ""
+    return normalize_text(getattr(article, "title", "")), normalize_text(getattr(article, "text", ""))
+
+
+def extract_direct_html_candidates(html_text: str, url: str) -> list[tuple[str, str, str]]:
+    candidates: list[tuple[str, str, str]] = []
+
+    trafilatura_title, trafilatura_text = extract_with_trafilatura(html_text, url)
+    if trafilatura_text:
+        candidates.append(("trafilatura", trafilatura_title, trafilatura_text))
+
+    newspaper_title, newspaper_text = extract_with_newspaper(html_text, url)
+    if newspaper_text:
+        candidates.append(("newspaper4k", newspaper_title, newspaper_text))
+
+    local_title, local_text, local_source = extract_readable_html(html_text)
+    if local_text:
+        candidates.append((f"local_html:{local_source}", local_title, local_text))
+
+    return candidates
+
+
 def build_jina_reader_url(url: str) -> str:
     return f"{JINA_READER_BASE_URL.rstrip('/')}/{url}"
 
@@ -373,22 +488,14 @@ def fetch_with_jina_reader(url: str, timeout: int = JINA_READER_TIMEOUT_SECONDS)
     if len(normalize_text(text)) < MIN_READER_TEXT_CHARS:
         return failed_result(url, "jina reader returned too little readable text", http_status)
 
-    text = truncate_text(text, MAX_STORED_TEXT_CHARS)
-    return {
-        "url": url,
-        "status": "success",
-        "http_status": http_status,
-        "error": "",
-        "title": title,
-        "text": text,
-        "text_excerpt": build_text_excerpt(text),
-        "char_count": len(text),
-        "extraction_source": "jina_reader",
-        "reader_url": reader_url,
-        "extractor_version": EXTRACTOR_VERSION,
-        "fetched_at": now_text(),
-        "from_cache": False,
-    }
+    return success_result(
+        url=url,
+        title=title,
+        text=text,
+        http_status=http_status,
+        extraction_source="jina_reader",
+        extra={"reader_url": reader_url},
+    )
 
 
 def build_text_excerpt(text: str, limit: int = 600) -> str:
@@ -406,9 +513,12 @@ def build_text_excerpt(text: str, limit: int = 600) -> str:
 
 
 def failed_result(url: str, error: str, http_status: int | None = None) -> dict[str, Any]:
+    content_fetch_status = infer_failure_status(error, http_status)
     return {
         "url": url,
         "status": "failed",
+        "content_fetch_status": content_fetch_status,
+        "content_quality": "none",
         "http_status": http_status,
         "error": error,
         "fetched_at": now_text(),
@@ -459,24 +569,34 @@ def read_article(
     if "text/html" not in content_type and "application/xhtml" not in content_type and "<html" not in response.text[:500].lower():
         return failed_result(clean_url, f"unsupported content type: {content_type}", http_status)
 
-    title, text, extraction_source = extract_readable_html(response.text)
-    text = truncate_text(text, max_stored_text_chars)
-    text_excerpt = build_text_excerpt(text)
-    payload = {
-        "url": clean_url,
-        "status": "success" if text_excerpt else "failed",
-        "http_status": http_status,
-        "error": "" if text_excerpt else f"no readable article text extracted; {jina_payload.get('error')}",
-        "title": title,
-        "text": text,
-        "text_excerpt": text_excerpt,
-        "char_count": len(text),
-        "extraction_source": extraction_source,
-        "jina_reader_error": normalize_text(jina_payload.get("error")),
-        "extractor_version": EXTRACTOR_VERSION,
-        "fetched_at": now_text(),
-        "from_cache": False,
-    }
+    candidates = extract_direct_html_candidates(response.text, clean_url)
+    best_source = ""
+    best_title = ""
+    best_text = ""
+    for extraction_source, title, text in candidates:
+        clean_text = normalize_text(text)
+        if len(clean_text) > len(best_text):
+            best_source = extraction_source
+            best_title = title
+            best_text = clean_text
+
+    if best_text:
+        payload = success_result(
+            url=clean_url,
+            title=best_title,
+            text=truncate_text(best_text, max_stored_text_chars),
+            http_status=http_status,
+            extraction_source=best_source,
+            extra={"jina_reader_error": normalize_text(jina_payload.get("error"))},
+        )
+    else:
+        payload = failed_result(
+            clean_url,
+            f"no readable article text extracted; {jina_payload.get('error')}",
+            http_status,
+        )
+        payload["jina_reader_error"] = normalize_text(jina_payload.get("error"))
+
     if payload["status"] == "success":
         cache_file = write_cached_article(base_dir, clean_url, payload)
         if cache_file:
@@ -493,6 +613,8 @@ def summarize_article_reader_result(reader_result: dict[str, Any], limit: int = 
 def compact_article_reader_result(reader_result: dict[str, Any]) -> dict[str, Any]:
     return {
         "status": normalize_text(reader_result.get("status")),
+        "content_fetch_status": normalize_text(reader_result.get("content_fetch_status")),
+        "content_quality": normalize_text(reader_result.get("content_quality")),
         "http_status": reader_result.get("http_status"),
         "error": normalize_text(reader_result.get("error")),
         "title": normalize_text(reader_result.get("title")),

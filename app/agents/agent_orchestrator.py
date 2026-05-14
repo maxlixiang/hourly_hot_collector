@@ -530,6 +530,27 @@ def objective_article_summary(
     return "数据库中暂无可用摘要。", "fallback"
 
 
+def classify_content_fetch_status(reader_result: dict[str, Any], summary_source: str) -> str:
+    reader_status = normalize_text(reader_result.get("content_fetch_status") or reader_result.get("status"))
+    if summary_source == "article_reader" and reader_status == "success":
+        return "full_text"
+    if summary_source in {"database_summary", "database_title"}:
+        if reader_status == "summary_only":
+            return "summary_only"
+        if reader_status in {"failed", "skipped", ""}:
+            return "summary_fallback"
+    return reader_status or "unknown"
+
+
+def content_fetch_reason(reader_result: dict[str, Any], summary_source: str) -> str:
+    if summary_source == "article_reader":
+        return normalize_text(reader_result.get("extraction_source")) or "article_reader"
+    error = normalize_text(reader_result.get("error"))
+    if error:
+        return error
+    return summary_source
+
+
 def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse:
     session = load_session_state(base_dir)
     hot_items = session.get("last_hot_news", [])
@@ -568,6 +589,8 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             published_time = article_published_time(article)
             compact_reader = compact_article_reader_result(reader_result)
             reader_status = compact_reader.get("status") or "unknown"
+            content_status = classify_content_fetch_status(compact_reader, summary_source)
+            content_quality = normalize_text(compact_reader.get("content_quality")) or "unknown"
             extraction_source = normalize_text(compact_reader.get("extraction_source"))
             reader_note = "成功"
             if reader_status != "success":
@@ -579,6 +602,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             lines.append(f"- {source_name}：{url or '无 URL'}")
             lines.append(f"  Published time: {published_time}")
             lines.append(f"  原文读取：{reader_note}")
+            lines.append(f"  内容状态：{content_status}（quality={content_quality}）")
             lines.append(f"  主要内容：{summary}")
             source_summaries.append(
                 {
@@ -590,6 +614,9 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
                     "fetched_at": normalize_text(article.get("fetched_at")),
                     "summary": summary,
                     "summary_source": summary_source,
+                    "content_fetch_status": content_status,
+                    "content_fetch_reason": content_fetch_reason(compact_reader, summary_source),
+                    "content_quality": content_quality,
                     "article_reader": compact_reader,
                 }
             )

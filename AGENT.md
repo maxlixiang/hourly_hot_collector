@@ -182,6 +182,7 @@ Source-summary behavior:
 ```text
 article URL
   -> https://r.jina.ai/{article URL}
+  -> trafilatura / newspaper4k extraction when optional deps are installed
   -> local HTML extraction fallback
   -> SQLite summary/title fallback
 ```
@@ -189,8 +190,10 @@ article URL
 Notes:
 
 - Jina Reader is preferred because it removes much of the navigation/ad/footer boilerplate from news pages.
+- `trafilatura` and `newspaper4k` are optional extractor layers. They are listed in requirements, but the code still skips them safely if unavailable.
 - `article_reader.py` only caches successful reads. Failed network/403 attempts are not cached.
 - Cache version is controlled by `EXTRACTOR_VERSION`; bump it when changing extraction semantics.
+- `content_fetch_status` should distinguish full text from summary-only fallbacks. Bloomberg/NYT/FT-style blocked pages should not be presented as full text.
 - The final answer must stay objective for `source_summary_request`: no expert interpretation, no subjective embellishment.
 - `reflection_checker.py` may append self-check notes when source reads fail or summaries fall back to local data.
 
@@ -521,6 +524,7 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 ```text
 文章 URL
   -> https://r.jina.ai/{文章 URL}
+  -> 安装可选依赖后使用 trafilatura / newspaper4k 提取正文
   -> 本地 HTML 正文提取兜底
   -> SQLite summary/title 兜底
 ```
@@ -528,8 +532,10 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 注意：
 
 - 优先使用 Jina Reader，是为了减少导航栏、广告、页脚等无效信息进入“主要内容”。
+- `trafilatura` 和 `newspaper4k` 是可选增强层。它们已写入 requirements，但如果当前环境没有安装，代码会安全跳过。
 - `article_reader.py` 只缓存成功读取的结果。网络失败、403 等失败结果不缓存。
 - `EXTRACTOR_VERSION` 控制缓存版本；修改正文提取语义时要 bump 版本。
+- `content_fetch_status` 用来区分全文和摘要兜底。Bloomberg / NYT / FT 这类被 403、paywall 或授权限制挡住的页面，不要伪装成全文。
 - `source_summary_request` 必须保持客观来源整理口径：不加入专家判断，不做主观发挥。
 - `reflection_checker.py` 会在原文读取失败或摘要兜底时追加自检提示。
 
