@@ -8,6 +8,7 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+COPY app /app/app
 COPY hourly_hot_collector.py /app/hourly_hot_collector.py
 COPY db.py /app/db.py
 COPY config /app/config
