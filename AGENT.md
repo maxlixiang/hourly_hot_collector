@@ -66,6 +66,13 @@ Root compatibility wrappers:
 - `cluster_context_builder.py`: root wrapper for context builder.
 - `db.py`: root wrapper for `app/storage/db.py`.
 
+Rules for root wrappers:
+
+- Do not add business logic to root wrappers.
+- New code belongs under `app/`.
+- New runnable entry points should prefer `scripts/`.
+- Keep wrappers thin and compatible because Docker and older commands may still call them.
+
 Preferred script entry points:
 
 - `scripts/run_collector.py`
@@ -86,6 +93,14 @@ Preferred script entry points:
 - `collector_common.py`: shared config, paths, time/text helpers, run status helpers.
 - `newsnow_collector.py`: NewsNow source fetching, markdown/raw/SQLite standardization.
 - `rss_collector.py`: RSS source loading, incremental filtering, markdown/raw/SQLite standardization.
+
+Collector scheduling:
+
+- Default `RUN_MINUTE` is `58`.
+- Default `RUN_IMMEDIATELY` is `false`.
+- A run at `13:58` writes `*_YYYY-MM-DD_13.*`.
+- RSS items published after `13:58` and before `14:00` are intentionally collected in the next `14:58` run and written to `*_14.*`.
+- Do not re-enable immediate runs by default; same-hour immediate runs can overwrite same-hour Markdown/raw files.
 
 `app/storage/`
 
@@ -448,6 +463,13 @@ documents.jsonl + chunks.jsonl
 - `cluster_context_builder.py`：上下文构建器的根目录兼容入口。
 - `db.py`：`app/storage/db.py` 的根目录兼容入口。
 
+根目录 wrapper 规则：
+
+- 不要在根目录 wrapper 里新增业务逻辑。
+- 新代码应放到 `app/` 下。
+- 新的可运行入口优先放到 `scripts/`。
+- 保持 wrapper 足够薄并继续兼容，因为 Docker 和旧命令可能仍在使用它们。
+
 推荐使用的脚本入口：
 
 - `scripts/run_collector.py`
@@ -468,6 +490,14 @@ documents.jsonl + chunks.jsonl
 - `collector_common.py`：共享配置、路径、时间/文本工具、运行状态辅助函数。
 - `newsnow_collector.py`：NewsNow 抓取、Markdown/raw/SQLite 标准化。
 - `rss_collector.py`：RSS 源加载、增量过滤、Markdown/raw/SQLite 标准化。
+
+采集调度规则：
+
+- 默认 `RUN_MINUTE=58`。
+- 默认 `RUN_IMMEDIATELY=false`。
+- 13:58 运行时写入 `*_YYYY-MM-DD_13.*`。
+- 13:58 到 14:00 之间发布的 RSS item 有意放到下一轮 14:58 采集，并写入 `*_14.*`。
+- 不要默认重新打开启动即采集；同一小时内立即采集会覆盖同名 Markdown/raw 文件。
 
 `app/storage/`
 

@@ -17,17 +17,9 @@
 
 ## 主要入口
 
-根目录保留了几个兼容入口，方便直接运行：
+推荐入口位于 `scripts/`。根目录保留少量兼容 wrapper，方便旧命令和部署配置继续运行；新的业务逻辑不要继续写到根目录 wrapper 里。
 
-| 文件 | 作用 |
-| --- | --- |
-| `hourly_hot_collector.py` | 抓新闻。运行 NewsNow + RSS 采集，写 Markdown、raw JSON、SQLite。 |
-| `hot_topic_pipeline.py` | 从已抓取的新闻里找热点。读取 SQLite，去重、聚类、排序，输出热点簇。 |
-| `cluster_context_builder.py` | 根据热点簇回查 SQLite，构建给 Agent 使用的上下文包。 |
-| `db.py` | SQLite 存储层兼容入口，真实实现位于 `app/storage/db.py`。 |
-| `main.py` | 简单主入口，目前调用采集器。 |
-
-推荐的新入口位于 `scripts/`：
+推荐的新入口：
 
 | 脚本 | 作用 |
 | --- | --- |
@@ -41,6 +33,16 @@
 | `scripts/run_knowledge_ingest.py` | 将 `data/knowledge/sources/**/*.txt` 入库为 documents/chunks JSONL。 |
 | `scripts/run_knowledge_evolution.py` | 生成知识库观点层和观点演化层。 |
 | `scripts/run_agents.py` | 新闻分析 Agent 对话入口。支持热点查询、来源整理、专家专题分析，并可自动调度前置流水线。 |
+
+根目录兼容入口：
+
+| 文件 | 作用 |
+| --- | --- |
+| `hourly_hot_collector.py` | 兼容采集入口。Docker / 旧命令可继续使用；新使用优先 `scripts/run_collector.py`。 |
+| `hot_topic_pipeline.py` | 兼容热点发现入口；新使用优先 `scripts/run_hot_pipeline.py`。 |
+| `cluster_context_builder.py` | 兼容上下文构建入口；新使用优先 `scripts/run_context_builder.py`。 |
+| `db.py` | SQLite 存储层兼容入口，真实实现位于 `app/storage/db.py`。 |
+| `main.py` | 简单主入口，目前调用采集器。 |
 
 ## 项目结构
 
@@ -134,6 +136,22 @@ python hourly_hot_collector.py
 ```bash
 python scripts/run_collector.py
 ```
+
+采集器默认按小时守护运行，并在每小时第 58 分钟执行一次采集：
+
+```text
+RUN_MINUTE=58
+RUN_IMMEDIATELY=false
+```
+
+例如 13:58 运行的结果会写入：
+
+```text
+data/markdown/rss/rss_hot_YYYY-MM-DD_13.md
+data/markdown/newsnow/daily_hot_YYYY-MM-DD_13.md
+```
+
+13:58 到 14:00 之间新发布的 RSS 文章会进入下一轮 14:58 的采集窗口，并写入 `*_14.*` 文件。默认关闭启动即采集，是为了避免在同一小时内多次启动程序时覆盖同名 Markdown/raw 文件。
 
 输出包括：
 

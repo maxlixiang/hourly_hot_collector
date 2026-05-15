@@ -1,3 +1,5 @@
+"""Compatibility wrapper. Prefer scripts/run_collector.py for new usage."""
+
 import hourly_hot_collector
 
 

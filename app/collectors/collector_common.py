@@ -37,7 +37,9 @@ RSS_DATABASE_FILE = Path(os.getenv("RSS_DATABASE_FILE", "./config/rss_sources.tx
 DB_FILE = Path(os.getenv("DB_FILE", "./data/db/data_hub.db"))
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Shanghai")
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "20"))
-RUN_MINUTE = int(os.getenv("RUN_MINUTE", "0"))
+RUN_MINUTE = int(os.getenv("RUN_MINUTE", "58"))
+if not 0 <= RUN_MINUTE <= 59:
+    raise ValueError("RUN_MINUTE must be between 0 and 59")
 USER_AGENT = os.getenv(
     "USER_AGENT",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "

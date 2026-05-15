@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Compatibility wrapper. Prefer scripts/run_collector.py for new usage."""
+
 from __future__ import annotations
 
 import os
@@ -65,7 +67,7 @@ def run_once() -> dict[str, Path | str]:
 
 
 def main() -> None:
-    run_immediately = os.getenv("RUN_IMMEDIATELY", "true").lower() in {"1", "true", "yes", "y"}
+    run_immediately = os.getenv("RUN_IMMEDIATELY", "false").lower() in {"1", "true", "yes", "y"}
 
     if run_immediately:
         try:
