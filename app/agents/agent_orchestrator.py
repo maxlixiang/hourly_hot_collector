@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from app.agents.agent_schemas import AgentPlan, AgentResponse, SUPPORTED_AGENT_SOURCE_TYPES, SUPPORTED_TASK_TYPES
 from app.agents.memory_store import MemoryStore
 from app.agents.reflection_checker import reflect_source_summary_results
+from app.agents.source_summary_report import write_source_summary_report
 from app.agents.task_planner import plan_user_request
 from app.tools.article_reader import compact_article_reader_result, read_article, summarize_article_reader_result
 from app.tools.article_reader.reader import build_text_excerpt, infer_content_quality
@@ -744,6 +745,47 @@ def format_source_distribution(distribution: list[dict[str, Any]]) -> str:
     return f"来源统计：共 {total_sources} 个来源，{total_articles} 条文章；" + "，".join(parts) + "。"
 
 
+def article_reading_policy(article: dict[str, Any], base_dir: Path) -> dict[str, Any]:
+    if normalize_text(article.get("source_type")) != "rss":
+        return {"article_reading": "enabled", "reason": ""}
+    return resolve_source_policy(
+        base_dir,
+        source_id=normalize_text(article.get("source_id")),
+    )
+
+
+def split_articles_by_content_readability(
+    articles: list[dict[str, Any]],
+    base_dir: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    readable_articles: list[dict[str, Any]] = []
+    excluded_articles: list[dict[str, Any]] = []
+    for article in articles:
+        policy = article_reading_policy(article, base_dir)
+        if normalize_text(policy.get("article_reading")) == "disabled":
+            copied = dict(article)
+            copied["content_exclusion_reason"] = normalize_text(policy.get("reason"))
+            excluded_articles.append(copied)
+            continue
+        readable_articles.append(article)
+    return readable_articles, excluded_articles
+
+
+def format_content_exclusion_notice(distribution: list[dict[str, Any]]) -> str:
+    if not distribution:
+        return ""
+    total_articles = sum(int(item.get("article_count") or 0) for item in distribution)
+    parts = [
+        f"{normalize_text(item.get('source_name')) or 'Unknown source'} {int(item.get('article_count') or 0)} 条"
+        for item in distribution
+    ]
+    return (
+        f"内容分析已排除 {total_articles} 条无法读取正文的来源："
+        + "，".join(parts)
+        + "；这些来源仅用于热点发现和热度判断。"
+    )
+
+
 def objective_article_summary(
     article: dict[str, Any],
     reader_result: dict[str, Any] | None = None,
@@ -860,26 +902,53 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             lines.append(f"\n新闻{selected_index}：没有在上一轮热点列表中找到这个编号。")
             continue
 
-        articles = pick_cluster_articles(hot_item.get("articles", []))
+        articles = [
+            {
+                **article,
+                "source_type": normalize_text(article.get("source_type")) or normalize_text(hot_item.get("source_type")),
+            }
+            for article in pick_cluster_articles(hot_item.get("articles", []))
+        ]
         lines.append(f"\n新闻{selected_index}：{hot_item.get('event_title')}")
         source_distribution = build_source_distribution(articles)
         lines.append(format_source_distribution(source_distribution))
+        readable_articles, excluded_articles = split_articles_by_content_readability(articles, base_dir)
+        excluded_source_distribution = build_source_distribution(excluded_articles)
+        exclusion_notice = format_content_exclusion_notice(excluded_source_distribution)
+        if exclusion_notice:
+            lines.append(exclusion_notice)
         if not articles:
             lines.append("暂时没有找到可展开的文章列表。")
             results.append({
                 "display_index": selected_index,
                 "event_title": hot_item.get("event_title"),
                 "source_distribution": source_distribution,
+                "analysis_source_distribution": [],
+                "excluded_source_distribution": excluded_source_distribution,
+                "sources": [],
+            })
+            continue
+        if not readable_articles:
+            lines.append("过滤无法读取正文的来源后，暂时没有可用于内容分析的文章。")
+            results.append({
+                "display_index": selected_index,
+                "event_title": hot_item.get("event_title"),
+                "source_distribution": source_distribution,
+                "analysis_source_distribution": [],
+                "excluded_source_distribution": excluded_source_distribution,
                 "sources": [],
             })
             continue
 
         source_summaries: list[dict[str, Any]] = []
-        for article in articles:
+        for article in readable_articles:
             source_name = normalize_text(article.get("source_name")) or "Unknown source"
             url = normalize_text(article.get("url"))
             reader_result = read_article_with_source_policy(article, base_dir)
             summary, summary_source = objective_article_summary(article, reader_result)
+            source_excerpt = build_text_excerpt(
+                normalize_text(reader_result.get("text_excerpt") or reader_result.get("text") or summary)
+            )
             published_time = article_published_time(article)
             compact_reader = compact_article_reader_result(reader_result)
             reader_status = compact_reader.get("status") or "unknown"
@@ -907,6 +976,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
                     "published_at": normalize_text(article.get("published_at")),
                     "fetched_at": normalize_text(article.get("fetched_at")),
                     "summary": summary,
+                    "source_excerpt": source_excerpt,
                     "summary_source": summary_source,
                     "content_fetch_status": content_status,
                     "content_fetch_reason": content_fetch_reason(compact_reader, summary_source),
@@ -922,6 +992,8 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
                 "cluster_id": hot_item.get("cluster_id"),
                 "event_title": hot_item.get("event_title"),
                 "source_distribution": source_distribution,
+                "analysis_source_distribution": build_source_distribution(readable_articles),
+                "excluded_source_distribution": excluded_source_distribution,
                 "sources": source_summaries,
             }
         )
@@ -932,10 +1004,35 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
         for note in reflection_notes:
             lines.append(f"- {note}")
 
+    report_result: dict[str, Any] | None = None
+    report_items = [item for item in results if item.get("sources")]
+    if report_items:
+        try:
+            report_result = write_source_summary_report(base_dir, query=plan.user_query, items=report_items)
+            report_payload = report_result.get("payload", {})
+            lines.append("\n非专家内容整理报告：")
+            lines.append(f"- HTML：{report_result.get('html_path')}")
+            lines.append(f"- JSON：{report_result.get('json_path')}")
+            lines.append(f"- 生成模式：{report_payload.get('generation_mode')}")
+        except Exception as exc:
+            lines.append("\n非专家内容整理报告：生成失败。")
+            lines.append(f"- 错误：{type(exc).__name__}: {exc}")
+
     return AgentResponse(
         plan.task_type,
         "\n".join(lines),
-        {"plan": plan.to_dict(), "items": results, "reflection_notes": reflection_notes},
+        {
+            "plan": plan.to_dict(),
+            "items": results,
+            "reflection_notes": reflection_notes,
+            "source_summary_report": {
+                "html_path": report_result.get("html_path"),
+                "json_path": report_result.get("json_path"),
+                "generation_mode": (report_result.get("payload") or {}).get("generation_mode"),
+            }
+            if report_result
+            else None,
+        },
     )
 
 

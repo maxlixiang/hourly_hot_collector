@@ -24,6 +24,7 @@ RSS_SOURCES = [
     ("CNN Edition", "http://rss.cnn.com/rss/edition.rss"),
     ("Yahoo Most Viewed", "https://news.yahoo.com/rss/mostviewed"),
     ("Fox News World", "https://moxie.foxnews.com/google-publisher/world.xml"),
+    ("Fox News Latest", "https://moxie.foxnews.com/google-publisher/latest.xml"),
     ("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
     ("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
     ("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
@@ -31,4 +32,7 @@ RSS_SOURCES = [
     ("The Guardian World", "https://www.theguardian.com/world/rss"),
     ("Foreign Policy", "https://foreignpolicy.com/feed/"),
     ("The Diplomat", "https://thediplomat.com/feed/"),
+    ("CNN", "https://edition.cnn.com/world/"),
+
+
 ]

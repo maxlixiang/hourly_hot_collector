@@ -120,6 +120,7 @@ Collector scheduling:
 - `article_reader.py`: compatibility wrapper. Do not add new extraction logic here.
 - `memory_store.py`: lightweight file-backed memory for latest hot list and recent interactions.
 - `reflection_checker.py`: small self-check helpers for source summary and expert-analysis responses.
+- `source_summary_report.py`: non-expert LLM/HTML writer for `source_summary_request`; keeps citations back to source excerpts.
 - `basic_analysis_agent.py`: rule-based analysis from cluster context.
 - `expert_agent.py`: rule/template expert report from context + analysis + retrieved context.
 - `llm_expert_writer.py`: final expression layer. Uses OpenAI-compatible chat completions if configured, otherwise fallback.
@@ -248,7 +249,8 @@ Notes:
 - Cache version is controlled by `EXTRACTOR_VERSION`; bump it when changing extraction semantics.
 - `content_fetch_status` should distinguish full text from summary-only fallbacks. Bloomberg/NYT/MarketWatch/WSJ/Economist-style blocked pages should remain useful RSS signals, but should not be presented as full text.
 - Fox News World currently uses `rss_content` because its RSS items include usable body text in `content:encoded`.
-- For `source_summary_request` such as `请对1做内容整理`, the Agent should read every article link in the selected hot cluster. Do not cap this at 5 sources and do not deduplicate by media/source name; if one media outlet has multiple articles in the cluster, keep all of them. Sort them by article time descending.
+- For `source_summary_request` such as `请对1做内容整理`, the Agent should read every article link in the selected hot cluster. Do not cap this at 5 sources and do not deduplicate by media/source name; if one media outlet has multiple articles in the cluster, keep all of them. Before content analysis, filter out RSS sources whose `config/rss_source_policies.txt` policy is `article_reading=disabled`. These sources remain useful for hot-topic discovery and heat scoring, but must not enter the body-text analysis. The answer should include a transparent exclusion note, e.g. `内容分析已排除 34 条无法读取正文的来源：Bloomberg Markets 18 条，NYT World 16 条；这些来源仅用于热点发现和热度判断。`
+- After source reading, `source_summary_request` should write a non-expert source report to `data/agent/source_reports/source_summary_*.html` and JSON. The report groups content by media source, extracts common facts, differences/additions, and information gaps. Use low-temperature LLM generation with a maximum temperature of `0.15`; every factual claim in the LLM output must carry citation ids that point back to the read article excerpts. If LLM config is absent or citation validation fails, use fallback output rather than uncited prose.
 - The final answer must stay objective for `source_summary_request`: no expert interpretation, no subjective embellishment.
 - `reflection_checker.py` may append self-check notes when source reads fail or summaries fall back to local data.
 
@@ -526,6 +528,7 @@ documents.jsonl + chunks.jsonl
 - `article_reader.py`：兼容转发层。不要在这里继续新增正文提取逻辑。
 - `memory_store.py`：轻量文件记忆，保存上一轮热点列表和最近交互。
 - `reflection_checker.py`：回答自检工具，用于提示原文读取失败、摘要兜底、缺 URL、缺发布时间等问题。
+- `source_summary_report.py`：`source_summary_request` 的非专家 LLM/HTML 报告生成器，要求事实结论引用回原文摘录。
 - `basic_analysis_agent.py`：基于规则，从 cluster context 生成基础分析。
 - `expert_agent.py`：基于 context + basic analysis + retrieved context 生成规则增强版专家报告。
 - `llm_expert_writer.py`：最终表达层。配置了 OpenAI-compatible chat completions 时调用 LLM，否则 fallback。
@@ -644,7 +647,8 @@ RSS 源策略
 - `EXTRACTOR_VERSION` 控制缓存版本；修改正文提取语义时要 bump 版本。
 - `content_fetch_status` 用来区分全文和摘要兜底。Bloomberg / NYT / MarketWatch / WSJ / Economist 这类被 401/403/paywall 或授权限制挡住的页面，应继续作为 RSS 新闻信号保留，但不要伪装成全文。
 - Fox News World 当前使用 `rss_content`，因为它的 RSS item 在 `content:encoded` 里提供可用正文。
-- 对 `请对1做内容整理` 这类 `source_summary_request`，Agent 应读取所选热点 cluster 里的全部文章链接。不要限制最多 5 个来源，也不要按媒体/source name 去重；同一媒体在同一 cluster 中出现多篇文章时全部保留。输出顺序按文章时间从新到旧。
+- 对 `请对1做内容整理` 这类 `source_summary_request`，Agent 应读取所选热点 cluster 里的全部文章链接。不要限制最多 5 个来源，也不要按媒体/source name 去重；同一媒体在同一 cluster 中出现多篇文章时全部保留。进入内容分析前，要过滤 `config/rss_source_policies.txt` 中 `article_reading=disabled` 的 RSS 来源。这些来源只用于热点发现和热度判断，不进入正文分析主体。回答中必须透明提示，例如：`内容分析已排除 34 条无法读取正文的来源：Bloomberg Markets 18 条，NYT World 16 条；这些来源仅用于热点发现和热度判断。`
+- 原文读取后，`source_summary_request` 应输出一份非专家来源报告到 `data/agent/source_reports/source_summary_*.html` 和 JSON。报告按媒体源分组，总结各媒体报道重点，并整理共同事实、差异与补充、信息缺口。LLM 生成必须使用低温，temperature 上限为 `0.15`；每个事实判断都必须带 citation id，指回已读取原文摘录。如果 LLM 未配置、调用失败或引用校验不通过，必须使用 fallback，而不是输出无引用的大模型发挥。
 - `source_summary_request` 必须保持客观来源整理口径：不加入专家判断，不做主观发挥。
 - `reflection_checker.py` 会在原文读取失败或摘要兜底时追加自检提示。
 

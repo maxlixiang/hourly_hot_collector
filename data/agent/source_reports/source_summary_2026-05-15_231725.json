@@ -1,0 +1,1393 @@
+{
+  "generated_at": "2026-05-15 23:17:25 +0800",
+  "query": "请对1做内容分析",
+  "writer_mode": "news_source_summary",
+  "temperature_max": 0.15,
+  "generation_mode": "llm",
+  "items": [
+    {
+      "item": {
+        "display_index": 1,
+        "source_type": "rss",
+        "cluster_id": "c_19",
+        "event_title": "Iran, Taiwan, and trade: Trump’s high‑stakes return to Beijing",
+        "source_distribution": [
+          {
+            "source_name": "Bloomberg Markets",
+            "article_count": 17
+          },
+          {
+            "source_name": "NYT World",
+            "article_count": 12
+          },
+          {
+            "source_name": "CNBC Business",
+            "article_count": 6
+          },
+          {
+            "source_name": "Al Jazeera",
+            "article_count": 5
+          },
+          {
+            "source_name": "The Guardian World",
+            "article_count": 5
+          },
+          {
+            "source_name": "Financial Times",
+            "article_count": 3
+          },
+          {
+            "source_name": "Foreign Policy",
+            "article_count": 3
+          },
+          {
+            "source_name": "NYT US News",
+            "article_count": 3
+          },
+          {
+            "source_name": "BBC World",
+            "article_count": 2
+          },
+          {
+            "source_name": "MarketWatch",
+            "article_count": 1
+          },
+          {
+            "source_name": "Wired",
+            "article_count": 1
+          }
+        ],
+        "analysis_source_distribution": [
+          {
+            "source_name": "CNBC Business",
+            "article_count": 6
+          },
+          {
+            "source_name": "Al Jazeera",
+            "article_count": 5
+          },
+          {
+            "source_name": "The Guardian World",
+            "article_count": 5
+          },
+          {
+            "source_name": "Financial Times",
+            "article_count": 3
+          },
+          {
+            "source_name": "Foreign Policy",
+            "article_count": 3
+          },
+          {
+            "source_name": "BBC World",
+            "article_count": 2
+          },
+          {
+            "source_name": "Wired",
+            "article_count": 1
+          }
+        ],
+        "excluded_source_distribution": [
+          {
+            "source_name": "Bloomberg Markets",
+            "article_count": 17
+          },
+          {
+            "source_name": "NYT World",
+            "article_count": 12
+          },
+          {
+            "source_name": "NYT US News",
+            "article_count": 3
+          },
+          {
+            "source_name": "MarketWatch",
+            "article_count": 1
+          }
+        ]
+      },
+      "generation_mode": "llm",
+      "generation_error": "",
+      "cited_sources": [
+        {
+          "source_name": "The Guardian World",
+          "title": "Trump-Xi accord on Iran elusive as US president’s China trip winds down",
+          "url": "https://www.theguardian.com/world/2026/may/15/trump-china-visit-iran-agreement-xi-jinping-elusive",
+          "published_time_beijing": "2026-05-15 18:24:20 +0800",
+          "published_at": "2026-05-15 18:24:20 +0800",
+          "fetched_at": "2026-05-15 18:57:59 +0800",
+          "summary": "Donald Trump has claimed that the US and China “feel very similar” about ending the war in Iran but offered no details about a possible breakthrough. The US president was speaking alongside Xi Jinping of China at the Zhongnanhai garden in Beijing on the second and final day of the leaders’ summit. “We did discuss Iran,” Trump said.",
+          "source_excerpt": "Donald Trump has claimed that the US and China “feel very similar” about ending the war in Iran but offered no details about a possible breakthrough. The US president was speaking alongside Xi Jinping of China at the Zhongnanhai garden in Beijing on the second and final day of the leaders’ summit. “We did discuss Iran,” Trump said.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump-Xi accord on Iran elusive as US president’s China trip winds down",
+            "char_count": 5999,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:47 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\ac89cf1642dc99cdb5234bab68f9cdd0e60d4d0560ab79d7985ac5fc499234c0.json"
+          },
+          "citation_id": "S1"
+        },
+        {
+          "source_name": "The Guardian World",
+          "title": "Trump China visit live: US president says a lot of problems ‘settled’, as he meets with Xi on final day of summit",
+          "url": "https://www.theguardian.com/world/live/2026/may/15/trump-china-visit-live-updates-xi-jinping-talks-meeting-summit-latest-news",
+          "published_time_beijing": "2026-05-15 18:10:52 +0800",
+          "published_at": "2026-05-15 18:10:52 +0800",
+          "fetched_at": "2026-05-15 18:57:59 +0800",
+          "summary": "If you’re just catching up, these ere are the latest developments from Trump’s summit with Xi: Trump declared that numerous deals had been struck between the US and China, including China buying 200 Boeing jets as well as US oil and soybeans. This deal has not been confirmed by either China or Boeing. Trump also stated that the he and Xi discussed Iran, withthepresident claiming that the two agreed that Iran should…",
+          "source_excerpt": "If you’re just catching up, these ere are the latest developments from Trump’s summit with Xi: Trump declared that numerous deals had been struck between the US and China, including China buying 200 Boeing jets as well as US oil and soybeans. This deal has not been confirmed by either China or Boeing. Trump also stated that the he and Xi discussed Iran, withthepresident claiming that the two agreed that Iran should never be able to possess nuclear weapons and that the strait of Hormuz must be opened as soon as possible.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump China visit live: US president says a lot of problems ‘settled’, as he meets with Xi on final day of summit",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 18:08:46 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\89ace4af9d6fdf1c321afa518205bd2366abdadf416a744b9c8c9b6fb7bcd128.json"
+          },
+          "citation_id": "S2"
+        },
+        {
+          "source_name": "BBC World",
+          "title": "Xi takes Trump on tour of Communist Party's seat of power as China visit ends",
+          "url": "https://www.bbc.com/news/articles/crrpj0ejxp8o?at_medium=RSS&at_campaign=rss",
+          "published_time_beijing": "2026-05-15 17:17:59 +0800",
+          "published_at": "2026-05-15 17:17:59 +0800",
+          "fetched_at": "2026-05-15 17:57:59 +0800",
+          "summary": "Xi takes Trump on tour of Communist Party's seat of power in Beijing US President Donald Trump's visit to Beijing ended with a tour of Zhongnanhai, the exclusive, heavily guarded 14th Century compound where top Chinese leaders live and work. Xi leading him on the tour was yet another moment for the cameras in a two-day trip heavy on pageantry but scant on details about policy agreed by both sides. The much-anticipat…",
+          "source_excerpt": "Xi takes Trump on tour of Communist Party's seat of power in Beijing US President Donald Trump's visit to Beijing ended with a tour of Zhongnanhai, the exclusive, heavily guarded 14th Century compound where top Chinese leaders live and work. Xi leading him on the tour was yet another moment for the cameras in a two-day trip heavy on pageantry but scant on details about policy agreed by both sides. The much-anticipated summit between the superpowers follows tensions over trade and the Iran war, but both leaders seemed conciliatory, with Trump calling his visit \"incredible\".",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump-Xi meeting: Beijing trip ends with Zhongnanhai tour",
+            "char_count": 3930,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:49 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\24bf4cbce26fa6a5ee67182a35a6047ab4e902a8bfb034bb72a07bdc01906f4c.json"
+          },
+          "citation_id": "S3"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "Trump-Xi summit: the 3 big takeaways from historic meeting in Beijing",
+          "url": "https://www.cnbc.com/2026/05/15/trump-xi-summit-the-3-big-takeaways-from-historic-meeting-in-beijing.html",
+          "published_time_beijing": "2026-05-15 17:11:05 +0800",
+          "published_at": "2026-05-15 17:11:05 +0800",
+          "fetched_at": "2026-05-15 17:57:59 +0800",
+          "summary": "President Donald Trump's closely watched visit to China this week has gone a long way toward strengthening a fragile trade truce with Beijing and stabilizing the bilateral relationship. While the visit was delayed by more than a month due to the Iran war, Trump's two-day summit with Chinese President Xi Jinping wrapped up Friday with plans for another meeting this fall. Here's what's changed since the leaders met: U.",
+          "source_excerpt": "President Donald Trump's closely watched visit to China this week has gone a long way toward strengthening a fragile trade truce with Beijing and stabilizing the bilateral relationship. While the visit was delayed by more than a month due to the Iran war, Trump's two-day summit with Chinese President Xi Jinping wrapped up Friday with plans for another meeting this fall. Here's what's changed since the leaders met: U.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump-Xi summit: The 3 big takeaways from historic meeting in Beijing",
+            "char_count": 3676,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:50 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\5263e2c1a0d66efb7b9b74f1724fd2b0b4d2ca4eace49e7d7f21dbb564572151.json"
+          },
+          "citation_id": "S4"
+        },
+        {
+          "source_name": "Al Jazeera",
+          "title": "How Xi-Trump summit failed to yield Iran war breakthrough",
+          "url": "https://www.aljazeera.com/news/2026/5/15/how-xi-trump-summit-failed-to-yield-iran-war-breakthrough?traffic_source=rss",
+          "published_time_beijing": "2026-05-15 17:01:20 +0800",
+          "published_at": "2026-05-15 17:01:20 +0800",
+          "fetched_at": "2026-05-15 17:57:59 +0800",
+          "summary": "How Xi-Trump summit failed to yield Iran war breakthrough US officials have nudged China to do more on the blocked Hormuz strait. President Xi doesn't appear to have budged. Trump and Xi hold final day of critical meetings in China For weeks leading up to United States President Donald Trump’s visit to Beijing, his administration has been pressing China to lean on Iran amid negotiations aimed at reaching a peace dea…",
+          "source_excerpt": "How Xi-Trump summit failed to yield Iran war breakthrough US officials have nudged China to do more on the blocked Hormuz strait. President Xi doesn't appear to have budged. Trump and Xi hold final day of critical meetings in China For weeks leading up to United States President Donald Trump’s visit to Beijing, his administration has been pressing China to lean on Iran amid negotiations aimed at reaching a peace deal between Washington and Tehran.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "How Xi-Trump summit failed to yield Iran war breakthrough",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:51 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\72b84ec9d15475ff44a83c076548da746a58f53a563ea907750a146f9f4d9062.json"
+          },
+          "citation_id": "S5"
+        },
+        {
+          "source_name": "BBC World",
+          "title": "Trump brought top CEOs to Beijing but few big deals emerge",
+          "url": "https://www.bbc.com/news/articles/clypj01189lo?at_medium=RSS&at_campaign=rss",
+          "published_time_beijing": "2026-05-15 16:38:51 +0800",
+          "published_at": "2026-05-15 16:38:51 +0800",
+          "fetched_at": "2026-05-15 16:57:59 +0800",
+          "summary": "Trump and Xi conclude 'very successful' talks but no deals announced US President Donald Trump left Beijing after a two-day summit saying he had struck \"fantastic trade deals, great for both countries\", but few details have emerged on what the two superpowers agreed. Trump arrived for a high-stakes summit with Chinese leader Xi Jinping on Wednesday, accompanied by several CEOs: a high-profile business delegation spa…",
+          "source_excerpt": "Trump and Xi conclude 'very successful' talks but no deals announced US President Donald Trump left Beijing after a two-day summit saying he had struck \"fantastic trade deals, great for both countries\", but few details have emerged on what the two superpowers agreed. Trump arrived for a high-stakes summit with Chinese leader Xi Jinping on Wednesday, accompanied by several CEOs: a high-profile business delegation spanning agriculture, aviation, electric vehicles and artificial intelligence (AI) chips.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump-Xi summit: US and China conclude 'very successful' talks but no deals announced",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 19:29:07 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\62fd812449d6b908c3977846ae2a8ca97b9b77540e8433b47b365d511ff3ebbc.json"
+          },
+          "citation_id": "S6"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "Oil prices jump after Trump says China agreed to buy U.S. crude following Xi talks",
+          "url": "https://www.cnbc.com/2026/05/15/oil-prices-china-us-iran-strait-of-hormuz-middle-east.html",
+          "published_time_beijing": "2026-05-15 16:33:21 +0800",
+          "published_at": "2026-05-15 16:33:21 +0800",
+          "fetched_at": "2026-05-15 16:57:59 +0800",
+          "summary": "Oil prices rose Friday as President Donald Trump is likely to turn his attention back to the stalemated conflicted with Iran after leaving a summit in China with President Xi Jinping. International benchmark Brent crude futures for July gained 2. 22 a barrel by 7:47 a.",
+          "source_excerpt": "Oil prices rose Friday as President Donald Trump is likely to turn his attention back to the stalemated conflicted with Iran after leaving a summit in China with President Xi Jinping. International benchmark Brent crude futures for July gained 2. 22 a barrel by 7:47 a.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Oil prices jump after Trump leaves China with Iran conflict still at a stalemate",
+            "char_count": 1397,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:52 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\85234e05f2954a10702382cc75c396a623bae325cf224e0bdfa849dedf3db7ba.json"
+          },
+          "citation_id": "S7"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "Trump leaves China after talks dominated by trade, oil and Taiwan",
+          "url": "https://www.cnbc.com/2026/05/15/trump-wraps-up-two-day-china-trip-invites-xi-for-a-september-visit.html",
+          "published_time_beijing": "2026-05-15 14:46:57 +0800",
+          "published_at": "2026-05-15 14:46:57 +0800",
+          "fetched_at": "2026-05-15 14:57:59 +0800",
+          "summary": "President Donald Trump departed Beijing Friday after two days of talks with Chinese President Xi Jinping that ran the gamut from Iran and Taiwan to trade, oil and Boeing. The summit, marked by pomp, flag-waving youths and a state dinner, also included statements from either side. and China agreed to \"strategic stability\" as a framework for the next three years, according to state media.",
+          "source_excerpt": "President Donald Trump departed Beijing Friday after two days of talks with Chinese President Xi Jinping that ran the gamut from Iran and Taiwan to trade, oil and Boeing. The summit, marked by pomp, flag-waving youths and a state dinner, also included statements from either side. and China agreed to \"strategic stability\" as a framework for the next three years, according to state media.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump leaves China after talks dominated by trade, oil and Taiwan",
+            "char_count": 1906,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:53 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\f85d4aea873e9cb42163c08533e33ed10454df90d869d1a8b6196f96d4e65a41.json"
+          },
+          "citation_id": "S8"
+        },
+        {
+          "source_name": "Al Jazeera",
+          "title": "Iran war day 77: Trump, Xi discuss Hormuz as Tehran rallies BRICS",
+          "url": "https://www.aljazeera.com/news/2026/5/15/iran-war-day-77-trump-xi-discuss-hormuz-as-tehran-rallies-brics?traffic_source=rss",
+          "published_time_beijing": "2026-05-15 14:18:39 +0800",
+          "published_at": "2026-05-15 14:18:39 +0800",
+          "fetched_at": "2026-05-15 14:57:59 +0800",
+          "summary": "Iran war day 77: Trump, Xi discuss Hormuz as Tehran rallies BRICS The US and Chinese leaders agreed during talks in Beijing that the Strait of Hormuz should remain open to ensure global energy supplies. United States President Donald Trump and Chinese President Xi Jinping discussed the Strait of Hormuz during talks in Beijing, with the White House saying Xi agreed the strategic waterway “must remain open to support…",
+          "source_excerpt": "Iran war day 77: Trump, Xi discuss Hormuz as Tehran rallies BRICS The US and Chinese leaders agreed during talks in Beijing that the Strait of Hormuz should remain open to ensure global energy supplies. United States President Donald Trump and Chinese President Xi Jinping discussed the Strait of Hormuz during talks in Beijing, with the White House saying Xi agreed the strategic waterway “must remain open to support the free flow of energy” as tensions over the Iran war continue to roil global markets.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Iran war day 77: Trump, Xi discuss Hormuz as Tehran rallies BRICS",
+            "char_count": 4567,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:54 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\2fca982ec3c194185e835ca8c307124bd7e2468c9f443716bf01312677afef40.json"
+          },
+          "citation_id": "S9"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "China to buy U.S. oil to feed its 'insatiable appetite,' Trump tells Fox News",
+          "url": "https://www.cnbc.com/2026/05/15/trump-xi-summit-energy-purchase-china-iran-war-oil-shock-.html",
+          "published_time_beijing": "2026-05-15 14:18:34 +0800",
+          "published_at": "2026-05-15 14:18:34 +0800",
+          "fetched_at": "2026-05-15 14:57:59 +0800",
+          "summary": "President Donald Trump said China has agreed to buy American oil, in a pre-recorded interview with Fox News that aired Thursday evening stateside, as the two nations push for concrete trade and business wins at their ongoing bilateral summit. \"They've agreed they want to buy oil from the United States, they're going to go to Texas, we're going to start sending Chinese ships to Texas and to Louisiana and to Alaska,\"…",
+          "source_excerpt": "President Donald Trump said China has agreed to buy American oil, in a pre-recorded interview with Fox News that aired Thursday evening stateside, as the two nations push for concrete trade and business wins at their ongoing bilateral summit. \"They've agreed they want to buy oil from the United States, they're going to go to Texas, we're going to start sending Chinese ships to Texas and to Louisiana and to Alaska,\" Trump said in the interview that was conducted after his meeting with Chinese President Xi Jinping in Beijing on Thursday.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "China to buy U.S. oil to feed its 'insatiable appetite,' Trump tells Fox News",
+            "char_count": 4131,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 18:08:44 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\3d786c6940a08a627dbb922bdbd8f80af4a14eafda2a435f5ec461c6e922f605.json"
+          },
+          "citation_id": "S10"
+        },
+        {
+          "source_name": "Financial Times",
+          "title": "China and US ‘feel very similar about Iran’, Trump says",
+          "url": "https://www.ft.com/content/66933e51-e06d-475c-aed2-f808f9443dea",
+          "published_time_beijing": "2026-05-15 14:03:06 +0800",
+          "published_at": "2026-05-15 14:03:06 +0800",
+          "fetched_at": "2026-05-15 14:57:59 +0800",
+          "summary": "China and US ‘feel very similar about Iran’, Donald Trump says Join FT Edit Only $49 a yearGet 2 months free with an annual subscription at was $59. Access to eight surprising articles a day, hand-picked by FT editors. For seamless reading, access content via the FT Edit page on FT.",
+          "source_excerpt": "China and US ‘feel very similar about Iran’, Donald Trump says Join FT Edit Only $49 a yearGet 2 months free with an annual subscription at was $59. Access to eight surprising articles a day, hand-picked by FT editors. For seamless reading, access content via the FT Edit page on FT.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "China and US ‘feel very similar about Iran’, Donald Trump says",
+            "char_count": 1143,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 18:08:48 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\9d5413026ca4db6dc705a8db64e1df756b2086cf22468b3153c7351ead86ec59.json"
+          },
+          "citation_id": "S11"
+        },
+        {
+          "source_name": "Al Jazeera",
+          "title": "After Trump’s pledge to ‘open up’ China, low expectations for summit deal",
+          "url": "https://www.aljazeera.com/economy/2026/5/15/after-trumps-pledge-to-open-up-china-low-expectations-for-summit-deal?traffic_source=rss",
+          "published_time_beijing": "2026-05-15 11:05:47 +0800",
+          "published_at": "2026-05-15 11:05:47 +0800",
+          "fetched_at": "2026-05-15 11:57:59 +0800",
+          "summary": "After Trump’s pledge to ‘open up’ China, low expectations for trade deal Analysts see only modest breakthrough in ties between world’s two largest economies. Before arriving for his high-stakes summit with Chinese leader Xi Jinping, United States President Donald Trump aimed to set expectations high. He said he would urge Xi to “open up” China’s economy and announced a delegation of top business executives, includin…",
+          "source_excerpt": "After Trump’s pledge to ‘open up’ China, low expectations for trade deal Analysts see only modest breakthrough in ties between world’s two largest economies. Before arriving for his high-stakes summit with Chinese leader Xi Jinping, United States President Donald Trump aimed to set expectations high. He said he would urge Xi to “open up” China’s economy and announced a delegation of top business executives, including Tesla’s Elon Musk, Apple’s Tim Cook and Nvidia’s Jensen Huang, to accompany him.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "After Trump’s pledge to ‘open up’ China, low expectations for trade deal",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:54 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\9df495e963f5dd17059075bb09e4dfaa3d3e653030704e22f27f6f6415770e19.json"
+          },
+          "citation_id": "S12"
+        },
+        {
+          "source_name": "Al Jazeera",
+          "title": "Iran war live: Trump’s visit to China shadowed by conflict with Tehran",
+          "url": "https://www.aljazeera.com/news/liveblog/2026/5/15/iran-war-live-trumps-visit-to-china-shadowed-by-conflict-with-tehran?traffic_source=rss",
+          "published_time_beijing": "2026-05-15 08:00:00 +0800",
+          "published_at": "2026-05-15 08:00:00 +0800",
+          "fetched_at": "2026-05-15 08:57:59 +0800",
+          "summary": "Live updatesLive updates, Iran war live: US, Tehran in ‘deadlock’ over enriched uranium – Araghchi Iran’s FM says he doubts US’s “seriousness” in negotiations, confirms he has spoken to Russia on offer to move uranium. live This video may contain light patterns or images that could trigger seizures or cause discomfort for people with visual sensitivities. Published On 15 May 2026 - Iran’s Foreign Minister Abbas Arag…",
+          "source_excerpt": "Live updatesLive updates, Iran war live: US, Tehran in ‘deadlock’ over enriched uranium – Araghchi Iran’s FM says he doubts US’s “seriousness” in negotiations, confirms he has spoken to Russia on offer to move uranium. live This video may contain light patterns or images that could trigger seizures or cause discomfort for people with visual sensitivities. Published On 15 May 2026 - Iran’s Foreign Minister Abbas Araghchi says he doubts the US’s “seriousness” in negotiations, confirms Iran spoke to Russia on its offer to move enriched uranium.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "partial_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "partial_text",
+            "http_status": 200,
+            "error": "",
+            "title": "US, Iran talks in ‘deadlock’ over enriched uranium, Araghchi says",
+            "char_count": 683,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:55 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\86d26972f34b50cbd4d1b138638d561fb9f1d651765b5ea6114c8bfa5f2d1816.json"
+          },
+          "citation_id": "S13"
+        },
+        {
+          "source_name": "Financial Times",
+          "title": "Trump’s allies pin hopes on Xi to defuse Strait of Hormuz crisis",
+          "url": "https://www.ft.com/content/e7ad9ab0-5a28-42ce-b90e-ac9f6bda75eb",
+          "published_time_beijing": "2026-05-15 07:08:16 +0800",
+          "published_at": "2026-05-15 07:08:16 +0800",
+          "fetched_at": "2026-05-15 07:57:59 +0800",
+          "summary": "Donald Trump’s allies pin hopes on Xi Jinping to defuse Strait of Hormuz crisis Join FT Edit Only $49 a yearGet 2 months free with an annual subscription at was $59. Access to eight surprising articles a day, hand-picked by FT editors. For seamless reading, access content via the FT Edit page on FT.",
+          "source_excerpt": "Donald Trump’s allies pin hopes on Xi Jinping to defuse Strait of Hormuz crisis Join FT Edit Only $49 a yearGet 2 months free with an annual subscription at was $59. Access to eight surprising articles a day, hand-picked by FT editors. For seamless reading, access content via the FT Edit page on FT.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Donald Trump’s allies pin hopes on Xi Jinping to defuse Strait of Hormuz crisis",
+            "char_count": 1160,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:57 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\765bcc4e06329c85d39d63ed279956b56ba73679f703d1d0d4e765600aeb15c4.json"
+          },
+          "citation_id": "S14"
+        },
+        {
+          "source_name": "Foreign Policy",
+          "title": "Talking (and Not Talking) Taiwan",
+          "url": "https://foreignpolicy.com/2026/05/14/trump-xi-meeting-summit-china-taiwan-arms-sale/",
+          "published_time_beijing": "2026-05-15 06:41:45 +0800",
+          "published_at": "2026-05-15 06:41:45 +0800",
+          "fetched_at": "2026-05-15 06:57:59 +0800",
+          "summary": "Talking (and Not Talking) Taiwan A tale of two readouts. Welcome back to Foreign Policy’s Situation Report. Here’s what’s on tap for the day: Trump and Xi share contrasting messages on Taiwan, Latvia’s government gets a shake-up, and Israel vows to sue the New York Times.",
+          "source_excerpt": "Talking (and Not Talking) Taiwan A tale of two readouts. Welcome back to Foreign Policy’s Situation Report. Here’s what’s on tap for the day: Trump and Xi share contrasting messages on Taiwan, Latvia’s government gets a shake-up, and Israel vows to sue the New York Times.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Talking (and Not Talking) Taiwan",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:58 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\e97109a75084c4b28019dbeae575fdd00323f611babde227e0438e3e4884f6d4.json"
+          },
+          "citation_id": "S15"
+        },
+        {
+          "source_name": "The Guardian World",
+          "title": "Photo of US-China delegation criticized over absence of women: ‘masculine, militarized and exclusionary’",
+          "url": "https://www.theguardian.com/world/2026/may/14/us-china-delegation-photo-no-women",
+          "published_time_beijing": "2026-05-15 05:15:54 +0800",
+          "published_at": "2026-05-15 05:15:54 +0800",
+          "fetched_at": "2026-05-15 05:57:59 +0800",
+          "summary": "By the time Donald Trump and Xi Jinping met at Beijing’s Great Hall of the People on Thursday, the bilateral had featured all the expected pomp and pageantry: a meticulously choreographed display of Chinese soldiers, children waving American and Chinese flags, and rows of senior officials and the US’s top business executives. Conspicuously absent at the table, however, were women from either delegation – a stark vis…",
+          "source_excerpt": "By the time Donald Trump and Xi Jinping met at Beijing’s Great Hall of the People on Thursday, the bilateral had featured all the expected pomp and pageantry: a meticulously choreographed display of Chinese soldiers, children waving American and Chinese flags, and rows of senior officials and the US’s top business executives. Conspicuously absent at the table, however, were women from either delegation – a stark visual that quickly drew criticism from observers who saw it as an unmistakable display of patriarchal power.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Photo of US-China delegation criticized over absence of women: ‘masculine, militarized and exclusionary’",
+            "char_count": 2656,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:59 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\1c984445b81a9f664eca1bf9f5f809a15ddd8c09530647b085a1f4e2288dc33b.json"
+          },
+          "citation_id": "S16"
+        },
+        {
+          "source_name": "Foreign Policy",
+          "title": "Day 1 of Beijing Summit Produces No Big Wins for Trump",
+          "url": "https://foreignpolicy.com/2026/05/14/trump-xi-jinping-china-summit-taiwan-iran-trade-beef/",
+          "published_time_beijing": "2026-05-15 04:33:46 +0800",
+          "published_at": "2026-05-15 04:33:46 +0800",
+          "fetched_at": "2026-05-15 04:57:59 +0800",
+          "summary": "Day 1 of Beijing Summit Produces No Big Wins for Trump From the Iran war to trade, the U. president failed to secure major concessions from his counterpart. Welcome back to World Brief, where we’re looking at the biggest takeaways of the Trump-Xi summit, British Prime Minister Keir Starmer’s political fortunes, and the collapse of Latvia’s coalition government.",
+          "source_excerpt": "Day 1 of Beijing Summit Produces No Big Wins for Trump From the Iran war to trade, the U. president failed to secure major concessions from his counterpart. Welcome back to World Brief, where we’re looking at the biggest takeaways of the Trump-Xi summit, British Prime Minister Keir Starmer’s political fortunes, and the collapse of Latvia’s coalition government.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Day 1 of Beijing Summit Produces No Big Wins for Trump",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:45:59 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\9313d591f2c0750e5fd7f8e2e2d755fd12f2846ddbde4e7702cdb7daa8a50d33.json"
+          },
+          "citation_id": "S17"
+        },
+        {
+          "source_name": "Foreign Policy",
+          "title": "Trump, Xi Hold High-Stakes Summit in Beijing",
+          "url": "https://foreignpolicy.com/2026/05/14/trump-xi-jinping-china-summit-taiwan-iran-trade/",
+          "published_time_beijing": "2026-05-15 04:33:37 +0800",
+          "published_at": "2026-05-15 04:33:37 +0800",
+          "fetched_at": "2026-05-15 04:57:59 +0800",
+          "summary": "Trump, Xi Hold High-Stakes Summit in Beijing From the Iran war to trade, the U. president failed to secure major concessions from his counterpart. “Partners, not adversaries” was the theme of high-stakes talks between U.",
+          "source_excerpt": "Trump, Xi Hold High-Stakes Summit in Beijing From the Iran war to trade, the U. president failed to secure major concessions from his counterpart. “Partners, not adversaries” was the theme of high-stakes talks between U.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump, Xi Hold High-Stakes Summit in Beijing",
+            "char_count": 2997,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:00 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\5e78ff5d51d589bbb4d89eb3bb958ea3187c8ea7cc15467080247fe0b68e8d40.json"
+          },
+          "citation_id": "S18"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "Chinese parts are already in U.S. cars as lawmakers warn Trump against China auto deal",
+          "url": "https://www.cnbc.com/2026/05/14/trump-china-chinese-autos.html",
+          "published_time_beijing": "2026-05-15 04:17:02 +0800",
+          "published_at": "2026-05-15 04:17:02 +0800",
+          "fetched_at": "2026-05-15 04:57:59 +0800",
+          "summary": "As President Donald Trump meets Chinese President Xi Jinping this week, lawmakers in both parties are warning the White House not to use the U. auto market as a bargaining chip in any deal with Beijing. The warning stems in part from Trump's January suggestion that he could welcome Chinese automakers if they built vehicles in the U.",
+          "source_excerpt": "As President Donald Trump meets Chinese President Xi Jinping this week, lawmakers in both parties are warning the White House not to use the U. auto market as a bargaining chip in any deal with Beijing. The warning stems in part from Trump's January suggestion that he could welcome Chinese automakers if they built vehicles in the U.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Chinese parts are already in U.S. cars as lawmakers warn Trump against China auto deal",
+            "char_count": 5453,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:01 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\00acf1eb2eaa172cbea528b86e74a03b5209f8a86969dedf5b156295208f1ef5.json"
+          },
+          "citation_id": "S19"
+        },
+        {
+          "source_name": "Al Jazeera",
+          "title": "Iran, Taiwan, and trade: Trump’s high‑stakes return to Beijing",
+          "url": "https://www.aljazeera.com/video/the-take-2/2026/5/14/aje-onl-chn_trumpvisit2026_av_v2-140526?traffic_source=rss",
+          "published_time_beijing": "2026-05-15 03:34:25 +0800",
+          "published_at": "2026-05-15 03:34:25 +0800",
+          "fetched_at": "2026-05-15 03:57:59 +0800",
+          "summary": "Iran, Taiwan, and trade: Trump’s high‑stakes return to Beijing As Trump meets Xi in Beijing for the first time in nine years, can trade war, Taiwan and Iran tensions be contained? US President Donald Trump returns to Beijing after nine years to meet Chinese President Xi Jinping. The trade war, conflict in Iran, and rising fears over Taiwan shape the talks.",
+          "source_excerpt": "Iran, Taiwan, and trade: Trump’s high‑stakes return to Beijing As Trump meets Xi in Beijing for the first time in nine years, can trade war, Taiwan and Iran tensions be contained? US President Donald Trump returns to Beijing after nine years to meet Chinese President Xi Jinping. The trade war, conflict in Iran, and rising fears over Taiwan shape the talks.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Iran, Taiwan, and trade: Trump’s high‑stakes return to Beijing",
+            "char_count": 922,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:02 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\c3cc0addf766a49857a5343b2696ac7f89086e1c673e2a1661946cf8ad29e9e4.json"
+          },
+          "citation_id": "S20"
+        },
+        {
+          "source_name": "Wired",
+          "title": "Trump’s Tech Posse in China, Who’s Winning in Musk v. Altman, and Hantavirus Conspiracy Theories",
+          "url": "https://www.wired.com/story/uncanny-valley-podcast-trump-tech-posse-china-musk-v-altman-trial-hantavirus-conspiracy-theories/",
+          "published_time_beijing": "2026-05-15 03:04:47 +0800",
+          "published_at": "2026-05-15 03:04:47 +0800",
+          "fetched_at": "2026-05-15 03:57:59 +0800",
+          "summary": "This week on Uncanny Valley, the team dives into Trump’s selected entourage for his high-stakes visit to China, ranging from Silicon Valley’s tech billionaires to Melania director Brett Ratner. We also break down the latest developments in Elon Musk’s lawsuit against Sam Altman, alleging that OpenAI abandoned its original nonprofit mission for profit-driven goals, and whether either side is actually gaining an edge…",
+          "source_excerpt": "This week on Uncanny Valley, the team dives into Trump’s selected entourage for his high-stakes visit to China, ranging from Silicon Valley’s tech billionaires to Melania director Brett Ratner. We also break down the latest developments in Elon Musk’s lawsuit against Sam Altman, alleging that OpenAI abandoned its original nonprofit mission for profit-driven goals, and whether either side is actually gaining an edge in the trial. Plus, Leah shares with us some of the most outlandish conspiracy theories that have been swirling around the hantavirus outbreak.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump’s Tech Posse in China, Who’s Winning in Musk v. Altman, and Hantavirus Conspiracy Theories",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:03 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\a143643aba24f9a02513fdbcbdb100f2bb27bc521dba1a68a36d814bdbab20fd.json"
+          },
+          "citation_id": "S21"
+        },
+        {
+          "source_name": "The Guardian World",
+          "title": "Xi warns Trump of ‘clashes and even conflicts’ with US over Taiwan",
+          "url": "https://www.theguardian.com/world/2026/may/14/trump-xi-jinping-meet-beijing-ahead-of-summit-trade-iran-war-ai-talks",
+          "published_time_beijing": "2026-05-15 01:37:29 +0800",
+          "published_at": "2026-05-15 01:37:29 +0800",
+          "fetched_at": "2026-05-15 01:57:59 +0800",
+          "summary": "China’s president, Xi Jinping, has warned of “clashes and even conflicts” with the US over Taiwan after meeting Donald Trump in Beijing. Xi’s remarks, published by China’s foreign ministry after his two-hour meeting with Trump on Thursday morning, said Taiwan was “the most important issue in China-US relations”. China is keen to put Taiwan at the top of an agenda that risks being overshadowed by the war in Iran and…",
+          "source_excerpt": "China’s president, Xi Jinping, has warned of “clashes and even conflicts” with the US over Taiwan after meeting Donald Trump in Beijing. Xi’s remarks, published by China’s foreign ministry after his two-hour meeting with Trump on Thursday morning, said Taiwan was “the most important issue in China-US relations”. China is keen to put Taiwan at the top of an agenda that risks being overshadowed by the war in Iran and disagreements over trade.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Xi warns Trump of ‘clashes and even conflicts’ with US over Taiwan",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:03 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\a7f2f2ed945d241bf6819e483d6591249cb30802912599344092980482a483ef.json"
+          },
+          "citation_id": "S22"
+        },
+        {
+          "source_name": "The Guardian World",
+          "title": "For anxious Taiwan, Trump’s silence after Xi talks is best possible outcome",
+          "url": "https://www.theguardian.com/world/2026/may/14/taiwan-trump-silence-xi-meeting-best-outcome",
+          "published_time_beijing": "2026-05-15 00:24:05 +0800",
+          "published_at": "2026-05-15 00:24:05 +0800",
+          "fetched_at": "2026-05-15 00:57:59 +0800",
+          "summary": "Before this week’s summit between the Chinese and US presidents, Taiwan had been cast as the anxious bystander. Observers suggested that Taipei feared the unpredictable and transactional Donald Trump might overturn Washington’s longstanding support for the island democracy, which Beijing claims as a breakaway province, during Thursday and Friday’s talks. But while the US president hailed his “great” meeting with his…",
+          "source_excerpt": "Before this week’s summit between the Chinese and US presidents, Taiwan had been cast as the anxious bystander. Observers suggested that Taipei feared the unpredictable and transactional Donald Trump might overturn Washington’s longstanding support for the island democracy, which Beijing claims as a breakaway province, during Thursday and Friday’s talks. But while the US president hailed his “great” meeting with his Chinese counterpart, Xi Jinping, when the leaders emerged on Thursday afternoon, he took an uncustomarily muted approach as he sidestepped questions on Taiwan.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "For anxious Taiwan, Trump’s silence after Xi talks is best possible outcome",
+            "char_count": 4279,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:04 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\a693d7a263eacc3f0414cc1980d27339dc19b37c3c2cbfa0bdf644cb0507f0fd.json"
+          },
+          "citation_id": "S23"
+        },
+        {
+          "source_name": "Financial Times",
+          "title": "Trump should go for ‘no deal’ in Beijing",
+          "url": "https://www.ft.com/content/a045be5d-ade6-4626-ad2f-54c7f393ff8f",
+          "published_time_beijing": "2026-05-15 00:01:39 +0800",
+          "published_at": "2026-05-15 00:01:39 +0800",
+          "fetched_at": "2026-05-15 00:57:59 +0800",
+          "summary": "Trump should go for ‘no deal’ in Beijing Subscribe to unlock this article Try unlimited access Only $1 for 4 weeksThen $75 per month. Complete digital access to quality FT journalism on any device. Cancel anytime during your trial.",
+          "source_excerpt": "Trump should go for ‘no deal’ in Beijing Subscribe to unlock this article Try unlimited access Only $1 for 4 weeksThen $75 per month. Complete digital access to quality FT journalism on any device. Cancel anytime during your trial.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Trump should go for ‘no deal’ in Beijing",
+            "char_count": 1054,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 20:46:06 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\64cfa164b2aec8ac528443d88753b5d2322e9e61493084632eeeed4358bc94e1.json"
+          },
+          "citation_id": "S24"
+        },
+        {
+          "source_name": "CNBC Business",
+          "title": "Xi warns Trump: Mishandling Taiwan will put U.S.-China relationship in 'great jeopardy'",
+          "url": "https://www.cnbc.com/2026/05/14/trump-xi-beijing-summit-trade-taiwan-ai-iran-rare-earths-tariffs.html",
+          "published_time_beijing": "2026-05-14 23:09:47 +0800",
+          "published_at": "2026-05-14 23:09:47 +0800",
+          "fetched_at": "2026-05-14 23:57:59 +0800",
+          "summary": "BEIJING — Chinese President Xi Jinping warned U. President Donald Trump on Thursday that the U. and China \"will have clashes and even conflicts\" if the long-standing issue of Taiwan's independence is mishandled.",
+          "source_excerpt": "BEIJING — Chinese President Xi Jinping warned U. President Donald Trump on Thursday that the U. and China \"will have clashes and even conflicts\" if the long-standing issue of Taiwan's independence is mishandled.",
+          "summary_source": "article_reader",
+          "content_fetch_status": "full_text",
+          "content_fetch_reason": "trafilatura",
+          "content_quality": "full_text",
+          "article_reader": {
+            "status": "success",
+            "content_fetch_status": "success",
+            "content_quality": "full_text",
+            "http_status": 200,
+            "error": "",
+            "title": "Xi warns Trump: Mishandling Taiwan will put U.S.-China relationship in 'great jeopardy'",
+            "char_count": 6000,
+            "extraction_source": "trafilatura",
+            "reader_url": "",
+            "jina_reader_error": "",
+            "extractor_version": "article_reader_v5_trafilatura_first",
+            "fetched_at": "2026-05-15 14:57:03 +0800",
+            "from_cache": true,
+            "cache_file": "F:\\Git上的程序等等\\hourly_hot_collector\\data\\agent\\article_cache\\e87673b74ce5d7cc65fe50af45049598d9e4baa36a0bab9eb669b4de1991ae1e.json"
+          },
+          "citation_id": "S25"
+        }
+      ],
+      "report": {
+        "event_overview": {
+          "text": "美国总统特朗普在2026年5月访问北京，与中国国家主席习近平举行两天峰会，讨论了伊朗、台湾、贸易等问题，但未达成公开的重大具体协议。特朗普声称中国同意购买美国石油和波音飞机，但这些声明未获确认。习近平警告台湾问题处理不当可能导致冲突。双方同意霍尔木兹海峡必须保持开放。",
+          "citations": [
+            "S1",
+            "S4",
+            "S5",
+            "S8",
+            "S22",
+            "S25"
+          ]
+        },
+        "media_summaries": [
+          {
+            "source_name": "CNBC Business",
+            "summary": "CNBC报道重点包括特朗普与习近平会谈涵盖伊朗、台湾、贸易、石油和波音；特朗普称中国同意购买美国石油；习近平警告台湾问题；美国议员警告不要以汽车市场为筹码；特朗普计划秋季再次会面。",
+            "citations": [
+              "S4",
+              "S7",
+              "S8",
+              "S10",
+              "S19",
+              "S25"
+            ],
+            "key_points": [
+              {
+                "text": "特朗普峰会为期两天，计划秋季再次会面。",
+                "citations": [
+                  "S4"
+                ]
+              },
+              {
+                "text": "特朗普声称中国同意购买美国石油。",
+                "citations": [
+                  "S10"
+                ]
+              },
+              {
+                "text": "习近平警告台湾问题处理不当会导致中美冲突。",
+                "citations": [
+                  "S25"
+                ]
+              },
+              {
+                "text": "美国两党议员警告白宫不要将美国汽车市场作为与中国交易筹码。",
+                "citations": [
+                  "S19"
+                ]
+              },
+              {
+                "text": "国际油价因特朗普离开中国后可能重返伊朗冲突而上涨。",
+                "citations": [
+                  "S7"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "美国议员警告不要将汽车市场作为与中国谈判筹码，其他来源未重点报道。",
+                "citations": [
+                  "S19"
+                ]
+              },
+              {
+                "text": "特朗普称中国将派船去德州、路易斯安那和阿拉斯加购买石油。",
+                "citations": [
+                  "S10"
+                ]
+              },
+              {
+                "text": "报道了油价因特朗普结束访华而上涨。",
+                "citations": [
+                  "S7"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "Al Jazeera",
+            "summary": "Al Jazeera报道重点包括特朗普与习近平的峰会未能就伊朗战争取得突破；双方同意霍尔木兹海峡必须保持开放；特朗普携顶级商务代表团到中国但期望不高；伊朗外长表示怀疑美国谈判诚意。",
+            "citations": [
+              "S5",
+              "S9",
+              "S12",
+              "S13",
+              "S20"
+            ],
+            "key_points": [
+              {
+                "text": "峰会未能促使中国在伊朗问题上让步。",
+                "citations": [
+                  "S5"
+                ]
+              },
+              {
+                "text": "特朗普与习近平同意霍尔木兹海峡必须保持开放。",
+                "citations": [
+                  "S9"
+                ]
+              },
+              {
+                "text": "特朗普称将敦促习近平“开放”中国经济，但分析人士认为期望不高。",
+                "citations": [
+                  "S12"
+                ]
+              },
+              {
+                "text": "伊朗外长阿巴斯·阿拉格齐表示怀疑美国在谈判中的“严肃性”，并确认伊朗与俄罗斯就转移浓缩铀进行交谈。",
+                "citations": [
+                  "S13"
+                ]
+              },
+              {
+                "text": "特朗普此次访问是其九年后首次重返北京。",
+                "citations": [
+                  "S20"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "伊朗外长的声明关于伊朗怀疑美国谈判诚意，其他来源未提及。",
+                "citations": [
+                  "S13"
+                ]
+              },
+              {
+                "text": "详细报道了伊朗战争第77天的进展，包括伊朗拉拢BRICS。",
+                "citations": [
+                  "S9"
+                ]
+              },
+              {
+                "text": "强调特朗普“开放”中国经济承诺的低期望。",
+                "citations": [
+                  "S12"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "The Guardian World",
+            "summary": "The Guardian报道重点包括特朗普峰会第二天结束，特朗普声称中美对伊朗感觉相似但无细节；习近平警告台湾问题可能致冲突；代表团照片无女性引发批评；特朗普宣布多项协议但未确认。",
+            "citations": [
+              "S1",
+              "S2",
+              "S16",
+              "S22",
+              "S23"
+            ],
+            "key_points": [
+              {
+                "text": "特朗普声称中美对伊朗“感觉非常相似”但未提供细节。",
+                "citations": [
+                  "S1"
+                ]
+              },
+              {
+                "text": "特朗普宣布中国购买200架波音飞机、美国石油和黄豆，但未得确认。",
+                "citations": [
+                  "S2"
+                ]
+              },
+              {
+                "text": "习近平在会谈中警告台湾问题处理不当会导致“冲突和摩擦”。",
+                "citations": [
+                  "S22"
+                ]
+              },
+              {
+                "text": "代表团正式会议照片因无女性而受批评。",
+                "citations": [
+                  "S16"
+                ]
+              },
+              {
+                "text": "特朗普在台湾问题上保持沉默，被解读为对台湾最有利的结果。",
+                "citations": [
+                  "S23"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "代表团照片缺乏女性引发争议，其他来源未重点报道。",
+                "citations": [
+                  "S16"
+                ]
+              },
+              {
+                "text": "特朗普对台湾沉默被台方视为积极，其他来源未提及。",
+                "citations": [
+                  "S23"
+                ]
+              },
+              {
+                "text": "特朗普声明中的交易清单包括黄豆，其他来源未强调。",
+                "citations": [
+                  "S2"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "Financial Times",
+            "summary": "Financial Times报道重点包括特朗普表示中美对伊朗“感觉非常相似”；特朗普的盟友寄希望于习近平帮助解决霍尔木兹海峡危机；此外还有观点文章建议特朗普在峰会上追求“无协议”。",
+            "citations": [
+              "S11",
+              "S14",
+              "S24"
+            ],
+            "key_points": [
+              {
+                "text": "特朗普表示中美“对伊朗感觉非常相似”。",
+                "citations": [
+                  "S11"
+                ]
+              },
+              {
+                "text": "特朗普的盟友寄希望于习近平帮助解决霍尔木兹危机。",
+                "citations": [
+                  "S14"
+                ]
+              },
+              {
+                "text": "观点文章建议特朗普在峰会上不应达成协议。",
+                "citations": [
+                  "S24"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "特朗普盟友期望习近平在霍尔木兹问题上扮演角色，其他来源未提及。",
+                "citations": [
+                  "S14"
+                ]
+              },
+              {
+                "text": "FT发表观点文章建议‘无协议’策略，其他来源未报道类似观点。",
+                "citations": [
+                  "S24"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "Foreign Policy",
+            "summary": "Foreign Policy报道重点包括特朗普-习近平峰会第一天没有重大胜利；双方在台湾问题上发布不同解读；会谈主题是“伙伴而非对手”。",
+            "citations": [
+              "S15",
+              "S17",
+              "S18"
+            ],
+            "key_points": [
+              {
+                "text": "第一天峰会未产生重大胜利。",
+                "citations": [
+                  "S17"
+                ]
+              },
+              {
+                "text": "美中在台湾问题上发布不同的解读。",
+                "citations": [
+                  "S15"
+                ]
+              },
+              {
+                "text": "会谈主题是“伙伴而非对手”。",
+                "citations": [
+                  "S18"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "强调第一天未获重大胜利的评估。",
+                "citations": [
+                  "S17"
+                ]
+              },
+              {
+                "text": "报道了双方对台湾问题的不同解读，其他来源未具体说明。",
+                "citations": [
+                  "S15"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "BBC World",
+            "summary": "BBC报道重点包括特朗普结束访问，称会谈“非常成功”但未宣布具体协议；习近平带特朗普参观中南海；特朗普携顶级CEO但少有大交易。",
+            "citations": [
+              "S3",
+              "S6"
+            ],
+            "key_points": [
+              {
+                "text": "特朗普称他的中国之行“不可思议”，并与习近平达成“非常成功的”会谈。",
+                "citations": [
+                  "S3"
+                ]
+              },
+              {
+                "text": "习近平带特朗普参观中南海。",
+                "citations": [
+                  "S3"
+                ]
+              },
+              {
+                "text": "特朗普携顶级CEO代表团但很少有大交易宣布。",
+                "citations": [
+                  "S6"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "特朗普直接说“非常成功”、“不可思议”的措辞。",
+                "citations": [
+                  "S3"
+                ]
+              },
+              {
+                "text": "报道了习近平带特朗普参观中南海的具体过程。",
+                "citations": [
+                  "S3"
+                ]
+              }
+            ]
+          },
+          {
+            "source_name": "Wired",
+            "summary": "Wired报道重点是特朗普访华的技术随行团，包括马斯克、库克、黄仁勋等，并讨论马斯克诉OpenAI案以及汉坦病毒阴谋论。",
+            "citations": [
+              "S21"
+            ],
+            "key_points": [
+              {
+                "text": "特朗普的高风险访华随行团包括硅谷科技亿万富翁如马斯克、库克、黄仁勋。",
+                "citations": [
+                  "S21"
+                ]
+              },
+              {
+                "text": "报道了马斯克起诉OpenAI的最新进展。",
+                "citations": [
+                  "S21"
+                ]
+              }
+            ],
+            "unique_details": [
+              {
+                "text": "聚焦科技随行团和马斯克诉讼，与其他来源的报道重点完全不同。",
+                "citations": [
+                  "S21"
+                ]
+              }
+            ]
+          }
+        ],
+        "common_facts": [
+          {
+            "text": "特朗普于2026年5月对中国进行为期两天的国事访问，与中国国家主席习近平会晤。",
+            "citations": [
+              "S1",
+              "S3",
+              "S4",
+              "S5",
+              "S6",
+              "S8",
+              "S20"
+            ]
+          },
+          {
+            "text": "峰会讨论了伊朗战争、台湾问题、贸易和石油等议题。",
+            "citations": [
+              "S1",
+              "S5",
+              "S8",
+              "S9",
+              "S25"
+            ]
+          },
+          {
+            "text": "习近平警告台湾问题处理不当可能导致中美冲突。",
+            "citations": [
+              "S22",
+              "S25"
+            ]
+          },
+          {
+            "text": "特朗普声称中国同意购买美国石油。",
+            "citations": [
+              "S2",
+              "S7",
+              "S8",
+              "S10"
+            ]
+          },
+          {
+            "text": "特朗普与习近平同意霍尔木兹海峡必须保持开放。",
+            "citations": [
+              "S2",
+              "S9"
+            ]
+          },
+          {
+            "text": "特朗普带来了一批顶级美国企业CEO参加峰会。",
+            "citations": [
+              "S6",
+              "S12",
+              "S21"
+            ]
+          },
+          {
+            "text": "特朗普宣布计划在秋季再次会面。",
+            "citations": [
+              "S4",
+              "S8"
+            ]
+          },
+          {
+            "text": "峰会未就能源或伊朗问题达成具体公开协议。",
+            "citations": [
+              "S1",
+              "S5",
+              "S17"
+            ]
+          }
+        ],
+        "differences_and_additions": [
+          {
+            "text": "CNBC报道了美国议员警告不要将汽车市场作为与中国谈判筹码，其他来源未重点报道。",
+            "citations": [
+              "S19"
+            ]
+          },
+          {
+            "text": "Al Jazeera详细报道了伊朗外长对谈判的怀疑，其他来源未提及。",
+            "citations": [
+              "S13"
+            ]
+          },
+          {
+            "text": "The Guardian报道了代表团照片无女性引发批评，其他来源未报道。",
+            "citations": [
+              "S16"
+            ]
+          },
+          {
+            "text": "Foreign Policy强调峰会第一天没有重大胜利，其他来源未如此强调。",
+            "citations": [
+              "S17"
+            ]
+          },
+          {
+            "text": "Financial Times报道了特朗普盟友寄希望于习近平解决霍尔木兹危机，其他来源未提。",
+            "citations": [
+              "S14"
+            ]
+          },
+          {
+            "text": "BBC报道了习近平带特朗普参观中南海的详细过程，其他来源类似但BBC更详细。",
+            "citations": [
+              "S3"
+            ]
+          },
+          {
+            "text": "Wired专注于科技CEO随行和马斯克官司，与其他来源的报道重点完全不同。",
+            "citations": [
+              "S21"
+            ]
+          }
+        ],
+        "information_gaps": [
+          {
+            "text": "特朗普声称的中国购买美国石油和200架波音飞机的具体协议未获得中国或波音的正式确认。",
+            "citations": [
+              "S2"
+            ]
+          },
+          {
+            "text": "关于伊朗问题的实际进展不明，双方未公布具体共识。",
+            "citations": [
+              "S1",
+              "S5"
+            ]
+          },
+          {
+            "text": "关于台湾问题的会谈结果未公开，特朗普在台湾问题上保持沉默。",
+            "citations": [
+              "S23"
+            ]
+          },
+          {
+            "text": "特朗普提到的秋季会面计划是否已经确定，没有进一步细节。",
+            "citations": [
+              "S4"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
