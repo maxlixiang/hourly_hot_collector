@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sqlite3
@@ -17,7 +18,7 @@ from zoneinfo import ZoneInfo
 
 TIMEZONE = "Asia/Shanghai"
 DB_FILE = "data/db/data_hub.db"
-ANALYSIS_WINDOW_HOURS = 6
+DEFAULT_ANALYSIS_WINDOW_HOURS = 6
 MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DECAY_LAMBDA = 0.08
 TOP_N_CLUSTERS = 10
@@ -85,7 +86,19 @@ def resolve_article_time(article: dict[str, Any]) -> datetime | None:
     return parse_datetime_object(article.get("fetched_at"))
 
 
-def load_articles_from_sqlite(base_dir: Path, source_type: str) -> list[dict[str, Any]]:
+def normalize_window_hours(window_hours: int | str | None) -> int:
+    try:
+        parsed = int(window_hours or DEFAULT_ANALYSIS_WINDOW_HOURS)
+    except (TypeError, ValueError):
+        parsed = DEFAULT_ANALYSIS_WINDOW_HOURS
+    return max(1, min(24 * 30, parsed))
+
+
+def load_articles_from_sqlite(
+    base_dir: Path,
+    source_type: str,
+    analysis_window_hours: int = DEFAULT_ANALYSIS_WINDOW_HOURS,
+) -> list[dict[str, Any]]:
     db_path = base_dir / DB_FILE
     if not db_path.exists():
         raise FileNotFoundError(f"SQLite database not found: {db_path}")
@@ -94,7 +107,8 @@ def load_articles_from_sqlite(base_dir: Path, source_type: str) -> list[dict[str
         raise ValueError(f"Unsupported source_type: {source_type}")
 
     now_dt = datetime.now(ZoneInfo(TIMEZONE))
-    cutoff_dt = now_dt - timedelta(hours=ANALYSIS_WINDOW_HOURS)
+    window_hours = normalize_window_hours(analysis_window_hours)
+    cutoff_dt = now_dt - timedelta(hours=window_hours)
     cutoff_text = cutoff_dt.strftime("%Y-%m-%d %H:%M:%S %z")
 
     query = """
@@ -506,17 +520,56 @@ def build_cluster_summaries(
     return cluster_summaries[:TOP_N_CLUSTERS]
 
 
-def output_file_path(base_dir: Path, source_type: str, now_dt: datetime) -> Path:
+def build_data_coverage(
+    articles: list[dict[str, Any]],
+    now_dt: datetime,
+    requested_window_hours: int,
+) -> dict[str, Any]:
+    article_times = [
+        resolve_article_time(article)
+        for article in articles
+    ]
+    valid_times = [article_time for article_time in article_times if article_time is not None]
+    if not valid_times:
+        return {
+            "requested_window_hours": requested_window_hours,
+            "actual_covered_hours": 0.0,
+            "coverage_complete": False,
+            "earliest_item_time": None,
+            "latest_item_time": None,
+            "latest_item_age_hours": None,
+        }
+
+    earliest_time = min(valid_times)
+    latest_time = max(valid_times)
+    actual_covered_hours = max(0.0, (now_dt - earliest_time).total_seconds() / 3600)
+    latest_item_age_hours = max(0.0, (now_dt - latest_time).total_seconds() / 3600)
+    return {
+        "requested_window_hours": requested_window_hours,
+        "actual_covered_hours": round(min(actual_covered_hours, float(requested_window_hours)), 2),
+        "coverage_complete": actual_covered_hours >= requested_window_hours * 0.95,
+        "earliest_item_time": earliest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "latest_item_time": latest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "latest_item_age_hours": round(latest_item_age_hours, 2),
+    }
+
+
+def output_file_path(base_dir: Path, source_type: str, now_dt: datetime, analysis_window_hours: int) -> Path:
     output_dir = base_dir / OUTPUT_DIR / source_type
     output_dir.mkdir(parents=True, exist_ok=True)
     prefix = OUTPUT_FILE_PREFIX_MAP[source_type]
-    filename = f"{prefix}_{now_dt.strftime('%Y-%m-%d_%H')}.json"
+    filename = f"{prefix}_{now_dt.strftime('%Y-%m-%d_%H')}_w{analysis_window_hours}h.json"
     return output_dir / filename
 
 
-def run_pipeline_for_source_type(base_dir: Path, source_type: str) -> Path:
+def run_pipeline_for_source_type(
+    base_dir: Path,
+    source_type: str,
+    analysis_window_hours: int = DEFAULT_ANALYSIS_WINDOW_HOURS,
+) -> Path:
     now_dt = datetime.now(ZoneInfo(TIMEZONE))
-    raw_articles = load_articles_from_sqlite(base_dir, source_type)
+    window_hours = normalize_window_hours(analysis_window_hours)
+    raw_articles = load_articles_from_sqlite(base_dir, source_type, window_hours)
     if not raw_articles:
         raise RuntimeError(f"No recent {source_type} news items were loaded from SQLite.")
 
@@ -550,11 +603,13 @@ def run_pipeline_for_source_type(base_dir: Path, source_type: str) -> Path:
         article["cluster_id"] = f"c_{int(labels[index])}"
 
     cluster_summaries = build_cluster_summaries(kept_articles, embeddings, labels, now_dt)
+    data_coverage = build_data_coverage(raw_articles, now_dt, window_hours)
     payload = {
         "generated_at": now_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
         "source_type": source_type,
         "db_file": str((base_dir / DB_FILE).resolve()),
-        "analysis_window_hours": ANALYSIS_WINDOW_HOURS,
+        "analysis_window_hours": window_hours,
+        "data_coverage": data_coverage,
         "model_name": MODEL_NAME,
         "similarity_threshold": float(config["similarity_threshold"]),
         "decay_lambda": DECAY_LAMBDA,
@@ -568,7 +623,7 @@ def run_pipeline_for_source_type(base_dir: Path, source_type: str) -> Path:
         "total_clusters": len(set(int(label) for label in labels)),
     }
 
-    path = output_file_path(base_dir, source_type, now_dt)
+    path = output_file_path(base_dir, source_type, now_dt, window_hours)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
@@ -576,13 +631,32 @@ def run_pipeline_for_source_type(base_dir: Path, source_type: str) -> Path:
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run hot topic discovery from SQLite news_items.")
+    parser.add_argument(
+        "--window-hours",
+        type=int,
+        default=DEFAULT_ANALYSIS_WINDOW_HOURS,
+        help="Only analyze news from the last N hours.",
+    )
+    parser.add_argument(
+        "--source-type",
+        choices=SUPPORTED_SOURCE_TYPES,
+        help="Only run hot topic discovery for the specified source type.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     base_dir = PROJECT_ROOT
     output_paths: list[Path] = []
+    source_types = [args.source_type] if args.source_type else list(SUPPORTED_SOURCE_TYPES)
+    window_hours = normalize_window_hours(args.window_hours)
 
-    for source_type in SUPPORTED_SOURCE_TYPES:
+    for source_type in source_types:
         try:
-            output_paths.append(run_pipeline_for_source_type(base_dir, source_type))
+            output_paths.append(run_pipeline_for_source_type(base_dir, source_type, window_hours))
         except RuntimeError as exc:
             message = str(exc)
             print(f"[WARN] {message}")

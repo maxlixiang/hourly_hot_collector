@@ -237,6 +237,106 @@ def find_latest_file(base_dir: Path, directory: str, pattern: str) -> Path | Non
     return candidates[-1]
 
 
+def load_json_or_none(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    try:
+        return load_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"[WARN] Unable to read JSON file {path}: {exc}")
+        return None
+
+
+def same_resolved_path(left: Any, right: Path | None) -> bool:
+    if right is None:
+        return False
+    text = normalize_text(left)
+    if not text:
+        return False
+    try:
+        return Path(text).resolve() == right.resolve()
+    except OSError:
+        return False
+
+
+def requested_window_hours(plan: AgentPlan) -> int:
+    try:
+        return max(1, int(plan.params.get("window_hours") or 24))
+    except (TypeError, ValueError):
+        return 24
+
+
+def latest_hot_file_for_window(base_dir: Path, source_type: str, window_hours: int) -> Path | None:
+    pattern = f"{source_type}_hot_clusters_*.json"
+    candidates = sorted((base_dir / f"data/hot/{source_type}").glob(pattern), reverse=True)
+    for candidate in candidates:
+        payload = load_json_or_none(candidate)
+        if payload and int(payload.get("analysis_window_hours") or 0) == window_hours:
+            return candidate
+    return None
+
+
+def latest_step_payload(base_dir: Path, step_name: str, source_type: str) -> tuple[dict[str, Any] | None, Path | None]:
+    step = PIPELINE_STEPS[step_name]
+    matching_outputs = [
+        (directory, pattern)
+        for directory, pattern in step["outputs"]
+        if pattern.startswith(f"{source_type}_")
+    ]
+    if not matching_outputs:
+        return None, None
+    directory, pattern = matching_outputs[0]
+    path = find_latest_file(base_dir, directory, pattern)
+    return load_json_or_none(path), path
+
+
+def source_step_output_current(base_dir: Path, step_name: str, source_type: str, window_hours: int) -> bool:
+    if step_name == "hot":
+        return latest_hot_file_for_window(base_dir, source_type, window_hours) is not None
+
+    if step_name == "context":
+        payload, _path = latest_step_payload(base_dir, step_name, source_type)
+        expected_hot_file = latest_hot_file_for_window(base_dir, source_type, window_hours)
+        return bool(payload) and same_resolved_path(payload.get("source_hot_clusters_file"), expected_hot_file)
+
+    if step_name == "basic":
+        payload, _path = latest_step_payload(base_dir, step_name, source_type)
+        _context_payload, context_file = latest_step_payload(base_dir, "context", source_type)
+        return bool(payload) and same_resolved_path(payload.get("source_context_file"), context_file)
+
+    if step_name == "retrieved":
+        payload, _path = latest_step_payload(base_dir, step_name, source_type)
+        _analysis_payload, analysis_file = latest_step_payload(base_dir, "basic", source_type)
+        return bool(payload) and same_resolved_path(payload.get("source_analysis_file"), analysis_file)
+
+    if step_name == "expert":
+        payload, _path = latest_step_payload(base_dir, step_name, source_type)
+        _context_payload, context_file = latest_step_payload(base_dir, "context", source_type)
+        _analysis_payload, analysis_file = latest_step_payload(base_dir, "basic", source_type)
+        _retrieved_payload, retrieved_file = latest_step_payload(base_dir, "retrieved", source_type)
+        return (
+            bool(payload)
+            and same_resolved_path(payload.get("source_context_file"), context_file)
+            and same_resolved_path(payload.get("source_analysis_file"), analysis_file)
+            and same_resolved_path(payload.get("source_retrieved_file"), retrieved_file)
+        )
+
+    if step_name == "llm":
+        payload, _path = latest_step_payload(base_dir, step_name, source_type)
+        _expert_payload, expert_file = latest_step_payload(base_dir, "expert", source_type)
+        return bool(payload) and same_resolved_path(payload.get("source_expert_report_file"), expert_file)
+
+    return outputs_exist(base_dir, step_name)
+
+
+def step_outputs_current(base_dir: Path, step_name: str, plan: AgentPlan) -> bool:
+    if step_name == "knowledge":
+        return outputs_exist(base_dir, step_name)
+    source_types = resolve_source_types(normalize_text(plan.params.get("source_type")) or "mixed")
+    window_hours = requested_window_hours(plan)
+    return all(source_step_output_current(base_dir, step_name, source_type, window_hours) for source_type in source_types)
+
+
 def load_latest_context_map(base_dir: Path, source_type: str) -> tuple[dict[str, dict[str, Any]], Path | None]:
     path = find_latest_file(base_dir, CONTEXT_DIR, CONTEXT_PATTERN.format(source_type=source_type))
     if path is None:
@@ -311,8 +411,23 @@ def coerce_summary(item: dict[str, Any]) -> str:
     return ""
 
 
+def load_data_coverage_from_context_file(context_file: Path | None) -> dict[str, Any] | None:
+    context_payload = load_json_or_none(context_file)
+    if not context_payload:
+        return None
+    hot_file = normalize_text(context_payload.get("source_hot_clusters_file"))
+    if not hot_file:
+        return None
+    hot_payload = load_json_or_none(Path(hot_file))
+    if not hot_payload:
+        return None
+    coverage = hot_payload.get("data_coverage")
+    return coverage if isinstance(coverage, dict) else None
+
+
 def load_ranked_items_for_source(base_dir: Path, source_type: str) -> list[dict[str, Any]]:
     context_map, context_file = load_latest_context_map(base_dir, source_type)
+    data_coverage = load_data_coverage_from_context_file(context_file)
     for report_kind, directory_template, pattern_template, collection_key in REPORT_SOURCES:
         directory = directory_template.format(source_type=source_type)
         pattern = pattern_template.format(source_type=source_type)
@@ -343,6 +458,7 @@ def load_ranked_items_for_source(base_dir: Path, source_type: str) -> list[dict[
                     "source_file": str(path),
                     "context_file": str(context_file) if context_file else None,
                     "generated_at": normalize_text(payload.get("generated_at")),
+                    "data_coverage": data_coverage,
                 }
             )
         ranked_items.sort(key=lambda value: (int(value["rank"]), -float(value["heat_score"])))
@@ -356,6 +472,39 @@ def resolve_source_types(source_type: str) -> list[str]:
     if source_type in SUPPORTED_SOURCE_TYPES:
         return [source_type]
     return list(SUPPORTED_SOURCE_TYPES)
+
+
+def format_hours(value: Any) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return "未知"
+    if number.is_integer():
+        return str(int(number))
+    return f"{number:.1f}".rstrip("0").rstrip(".")
+
+
+def build_coverage_warnings(items: list[dict[str, Any]], requested_window_hours: int) -> list[str]:
+    by_source: dict[str, dict[str, Any]] = {}
+    for item in items:
+        source_type = normalize_text(item.get("source_type"))
+        coverage = item.get("data_coverage")
+        if source_type and isinstance(coverage, dict):
+            by_source[source_type] = coverage
+
+    warnings: list[str] = []
+    for source_type, coverage in sorted(by_source.items()):
+        if bool(coverage.get("coverage_complete")):
+            continue
+        actual_hours = coverage.get("actual_covered_hours")
+        if actual_hours is None:
+            continue
+        source_label = source_type.upper()
+        warnings.append(
+            f"提示：{source_label} 当前数据库没有完整的最新 {requested_window_hours} 小时数据，"
+            f"现有数据库约覆盖过去 {format_hours(actual_hours)} 小时，下面仅根据这部分数据给出分析结果。"
+        )
+    return warnings
 
 
 def save_session_state(base_dir: Path, payload: dict[str, Any]) -> Path | None:
@@ -397,11 +546,14 @@ def has_knowledge_sources(base_dir: Path) -> bool:
     return any((base_dir / "data/knowledge/sources").glob("**/*.txt"))
 
 
-def run_pipeline_script(base_dir: Path, step_name: str) -> None:
+def run_pipeline_script(base_dir: Path, step_name: str, plan: AgentPlan | None = None) -> None:
     script = normalize_text(PIPELINE_STEPS[step_name]["script"])
     print(f"[PIPELINE] Running {script}")
+    command = [sys.executable, script]
+    if step_name == "hot" and plan is not None:
+        command.extend(["--window-hours", str(requested_window_hours(plan))])
     completed = subprocess.run(
-        [sys.executable, script],
+        command,
         cwd=base_dir,
         text=True,
         encoding="utf-8",
@@ -444,11 +596,7 @@ def ensure_pipeline_outputs(
             results.append({"step": step_name, "status": "skipped", "reason": "no knowledge txt sources"})
             continue
 
-        if not force_pipeline and outputs_exist(base_dir, step_name):
-            results.append({"step": step_name, "status": "reused"})
-            continue
-
-        run_pipeline_script(base_dir, step_name)
+        run_pipeline_script(base_dir, step_name, plan)
         results.append({"step": step_name, "status": "generated"})
     return results
 
@@ -472,6 +620,7 @@ def run_hot_news_query(base_dir: Path, plan: AgentPlan) -> AgentResponse:
 
     display_items: list[dict[str, Any]] = []
     lines = [f"过去约 {window_hours} 小时的热点新闻如下（v1 基于本地最新热点分析结果）："]
+    lines.extend(build_coverage_warnings(selected, window_hours))
     for index, item in enumerate(selected, start=1):
         display_item = dict(item)
         display_item["display_index"] = index
