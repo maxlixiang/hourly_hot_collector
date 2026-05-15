@@ -32,7 +32,7 @@ RSS_SOURCES = [
     ("The Guardian World", "https://www.theguardian.com/world/rss"),
     ("Foreign Policy", "https://foreignpolicy.com/feed/"),
     ("The Diplomat", "https://thediplomat.com/feed/"),
-    ("CNN", "https://edition.cnn.com/world/"),
+    ("CNN", "http://rss.cnn.com/rss/edition_world.rss"),
 
 
 ]

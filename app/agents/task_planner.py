@@ -29,6 +29,23 @@ SOURCE_TYPE_ALIASES = {
     "rss": ("rss", "外媒", "英文", "正式新闻", "新闻源"),
 }
 
+DOMAIN_ALIASES = {
+    "finance": (
+        "财经",
+    ),
+    "geopolitics": (
+        "政治",
+        "国际",
+        "地缘政治",
+        "地缘",
+    ),
+    "tech_ai": (
+        "科技",
+        "AI",
+        "ai",
+    ),
+}
+
 
 def normalize_query(text: str) -> str:
     return (
@@ -117,6 +134,16 @@ def infer_source_type(query: str) -> str:
     return "mixed"
 
 
+def infer_domain(query: str) -> str | None:
+    normalized = normalize_query(query)
+    lowered = normalized.lower()
+    for domain, aliases in DOMAIN_ALIASES.items():
+        for alias in aliases:
+            if alias.lower() in lowered:
+                return domain
+    return None
+
+
 def infer_task_type(query: str, explicit_task_type: str | None = None) -> tuple[str, float, list[str]]:
     if explicit_task_type:
         if explicit_task_type not in SUPPORTED_TASK_TYPES:
@@ -184,6 +211,9 @@ def plan_user_request(
         "window_hours": extract_time_window_hours(normalized_query),
         "source_type": infer_source_type(normalized_query),
     }
+    domain = infer_domain(normalized_query)
+    if domain:
+        params["domain"] = domain
 
     if task_type == "hot_news_query":
         params["limit"] = extract_limit(normalized_query)

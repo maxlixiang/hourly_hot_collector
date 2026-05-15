@@ -100,6 +100,7 @@ Collector scheduling:
 - Default `RUN_IMMEDIATELY` is `false`.
 - A run at `13:58` writes `*_YYYY-MM-DD_13.*`.
 - RSS items published after `13:58` and before `14:00` are intentionally collected in the next `14:58` run and written to `*_14.*`.
+- RSS collection is intentionally incremental. `rss_collector.py` uses the previous `success` or `partial` fetch run's `finished_at` as the next window start, falling back to the previous hour only when there is no successful prior run. Keep this behavior unless the user explicitly asks to change RSS collection semantics.
 - Do not re-enable immediate runs by default; same-hour immediate runs can overwrite same-hour Markdown/raw files.
 
 `app/storage/`
@@ -215,6 +216,7 @@ Prerequisite scheduling:
 
 - `source_summary_request` uses the previous hot-news session state and does not run the full pipeline automatically.
 - Expert capability is intentionally opt-in. The planner should only infer `expert_topic_analysis` when the user query explicitly contains `专家`; generic words like “分析”, “预测”, “影响”, “判断”, or “怎么看” must stay on the ordinary news path unless `--task-type expert_topic_analysis` is provided.
+- Hot-news queries support three return-stage domain filters: `finance`, `geopolitics`, and `tech_ai`. Keep planner trigger words intentionally narrow: `财经` -> `finance`; `政治`, `国际`, `地缘`, `地缘政治` -> `geopolitics`; `科技`, `AI`, `ai` -> `tech_ai`. Richer domain keywords may still be used inside the return-stage cluster scoring logic. Domain filtering must happen after full hot-topic generation; do not filter collection or clustering inputs for these ordinary domain requests.
 - `hot_news_query` regenerates hot topic, context, basic analysis, and `run_llm_expert_writer --mode news` on each query unless `--no-auto-pipeline` is set. It must stay source-grounded and must not add expert interpretation.
 - `expert_topic_analysis` regenerates hot topic, context, basic analysis, knowledge ingestion, retriever, expert report, and `run_llm_expert_writer --mode expert`, then searches the newly generated expert/LLM reports unless `--no-auto-pipeline` is set.
 - User-requested time windows flow into `run_hot_pipeline.py`. For example, `告诉我过去24小时的10条热点新闻` becomes `python scripts/run_hot_pipeline.py --window-hours 24`.
@@ -508,6 +510,7 @@ documents.jsonl + chunks.jsonl
 - 默认 `RUN_IMMEDIATELY=false`。
 - 13:58 运行时写入 `*_YYYY-MM-DD_13.*`。
 - 13:58 到 14:00 之间发布的 RSS item 有意放到下一轮 14:58 采集，并写入 `*_14.*`。
+- RSS 采集语义是增量采集。`rss_collector.py` 使用上一轮 `success` 或 `partial` 采集记录的 `finished_at` 作为下一轮窗口起点；没有成功历史记录时才回退到前 1 小时。除非用户明确要求改变 RSS 采集语义，否则不要改成全量抓取。
 - 不要默认重新打开启动即采集；同一小时内立即采集会覆盖同名 Markdown/raw 文件。
 
 `app/storage/`
@@ -608,11 +611,27 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 - `--force-pipeline`：为兼容旧命令保留；默认自动流水线已经会在每次查询时重新生成前置产物。
 - `--skip-llm`：自动流水线中跳过 LLM writer。
 - `--json`：输出完整结构化响应。
+- 常用命令示例：
+
+```bash
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点财经新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点国际新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点科技新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --domain finance
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --domain geopolitics
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --domain tech_ai
+python scripts/run_agents.py --query "请对1，2做内容整理和总结"
+python scripts/run_agents.py --query "从专家的角度，分析过去一周关于以色列和伊朗战争的相关新闻"
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --no-auto-pipeline
+python scripts/run_agents.py --query "告诉我过去24小时的10条热点新闻" --skip-llm
+```
 
 前置流水线调度：
 
 - `source_summary_request` 依赖上一轮热点列表的 session state，不自动运行完整 pipeline。
 - 专家能力必须保持显式触发。planner 只有在用户 query 明确包含“专家”二字时，才应推断为 `expert_topic_analysis`；“分析”“预测”“影响”“判断”“怎么看”等泛化词如果没有“专家”，必须继续走普通新闻路径，除非命令显式传入 `--task-type expert_topic_analysis`。
+- 热点查询支持三个返回阶段领域过滤：`finance`（财经）、`geopolitics`（地缘政治）、`tech_ai`（AI/科技）。planner 的触发词必须保持收敛：`财经` -> `finance`；`政治`、`国际`、`地缘`、`地缘政治` -> `geopolitics`；`科技`、`AI`、`ai` -> `tech_ai`。更丰富的领域关键词可以只用于返回阶段的 cluster 打分。领域过滤必须发生在全量热点生成之后；不要为了普通领域请求过滤采集或聚类输入。
 - `hot_news_query` 默认每次查询都重新生成 hot topic、context、basic analysis、`run_llm_expert_writer --mode news`，除非显式使用 `--no-auto-pipeline`。普通热点查询必须保持普通新闻事实整理，不加入专家推断。
 - `expert_topic_analysis` 默认会重新生成 hot topic、context、basic analysis、knowledge ingest、retriever、expert report、`run_llm_expert_writer --mode expert`，然后在本轮生成的 expert / LLM report 中做关键词匹配，除非显式使用 `--no-auto-pipeline`。
 - 用户请求的时间窗口会传入 `run_hot_pipeline.py`。例如 `告诉我过去24小时的10条热点新闻` 会变成 `python scripts/run_hot_pipeline.py --window-hours 24`。

@@ -142,6 +142,64 @@ QUERY_STOPWORDS = {
     "analysis",
 }
 
+DOMAIN_LABELS = {
+    "finance": "财经",
+    "geopolitics": "地缘政治",
+    "tech_ai": "AI/科技",
+}
+
+DOMAIN_KEYWORDS = {
+    "finance": (
+        "财经", "金融", "市场", "股市", "股票", "美股", "A股", "港股", "纳指", "标普", "道指",
+        "财报", "营收", "利润", "亏损", "融资", "IPO", "并购", "收购", "债券", "利率",
+        "降息", "加息", "央行", "通胀", "油价", "原油", "黄金", "美元", "人民币", "汇率",
+        "关税", "贸易", "订单", "出口", "进口", "商业", "公司", "企业", "投资", "估值",
+        "证券", "中证协", "证监会", "上交所", "深交所", "投资者", "行标",
+        "market", "markets", "stock", "stocks", "shares", "earnings", "revenue", "profit",
+        "inflation", "tariff", "trade", "oil", "gold", "dollar", "bond", "rate", "fed",
+    ),
+    "geopolitics": (
+        "地缘", "地缘政治", "国际政治", "外交", "战争", "冲突", "军事", "制裁", "停火", "谈判",
+        "会谈", "峰会", "台海", "台湾", "中东", "伊朗", "以色列", "乌克兰", "俄罗斯", "中国",
+        "美国", "特朗普", "习近平", "北约", "欧盟", "边境", "导弹", "袭击", "军方", "安全",
+        "geopolitics", "war", "conflict", "ceasefire", "sanctions", "military", "diplomacy",
+        "summit", "taiwan", "iran", "israel", "ukraine", "russia", "china", "trump", "xi",
+    ),
+    "tech_ai": (
+        "AI", "人工智能", "科技", "技术", "芯片", "半导体", "英伟达", "英特尔",
+        "谷歌", "苹果", "微软", "OpenAI", "大模型", "机器人", "数据中心", "算力", "云计算",
+        "软件", "硬件", "电动车", "自动驾驶", "特斯拉", "nvidia", "ai", "artificial intelligence",
+        "chip", "chips", "semiconductor", "technology", "tech", "data center", "datacenter",
+        "robot", "openai", "google", "apple", "microsoft", "tesla",
+    ),
+}
+
+DOMAIN_SOURCE_KEYWORDS = {
+    "finance": (
+        "Bloomberg", "CNBC", "Financial Times", "MarketWatch", "Wall Street Journal", "Economist",
+        "财联社", "华尔街见闻", "36Kr", "Markets", "Business", "Finance",
+    ),
+    "geopolitics": (
+        "BBC World", "NYT World", "The Guardian World", "Al Jazeera", "Foreign Policy", "参考消息",
+        "澎湃新闻", "腾讯新闻", "卫星通讯社", "World",
+    ),
+    "tech_ai": (
+        "Wired", "The Verge", "Engadget", "36Kr", "科技", "Tech",
+    ),
+}
+
+DOMAIN_EXCLUDE_KEYWORDS = (
+    "promo code",
+    "promo codes",
+    "coupon code",
+    "coupon codes",
+    "discount code",
+    "discount codes",
+    "优惠码",
+    "促销代码",
+    "% off",
+)
+
 
 def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -667,25 +725,125 @@ def ensure_pipeline_outputs(
     return results
 
 
+def domain_label(domain: str | None) -> str:
+    return DOMAIN_LABELS.get(normalize_text(domain), normalize_text(domain) or "全部")
+
+
+def item_domain_content_text(item: dict[str, Any]) -> str:
+    pieces = [
+        normalize_text(item.get("event_title")),
+        normalize_text(item.get("summary")),
+        " ".join(normalize_text(title) for title in item.get("representative_titles", []) or []),
+    ]
+    for article in item.get("articles", []) or []:
+        pieces.append(normalize_text(article.get("title")))
+    return "\n".join(piece for piece in pieces if piece)
+
+
+def item_domain_source_text(item: dict[str, Any]) -> str:
+    pieces = [
+        " ".join(normalize_text(source) for source in item.get("sources", []) or []),
+    ]
+    for article in item.get("articles", []) or []:
+        pieces.append(normalize_text(article.get("source_name")))
+    return "\n".join(piece for piece in pieces if piece)
+
+
+def count_domain_keyword_hits(text: str, keywords: tuple[str, ...]) -> int:
+    lowered = text.lower()
+    hits = 0
+    for keyword in keywords:
+        normalized_keyword = normalize_text(keyword)
+        if not normalized_keyword:
+            continue
+        lowered_keyword = normalized_keyword.lower()
+        if re.fullmatch(r"[a-z0-9][a-z0-9\.\- ]*", lowered_keyword):
+            pattern = rf"(?<![a-z0-9]){re.escape(lowered_keyword)}(?![a-z0-9])"
+            if re.search(pattern, lowered):
+                hits += 1
+            continue
+        if lowered_keyword in lowered:
+            hits += 1
+    return hits
+
+
+def score_item_domain(item: dict[str, Any], domain: str | None) -> int:
+    domain_key = normalize_text(domain)
+    if not domain_key or domain_key not in DOMAIN_KEYWORDS:
+        return 0
+
+    content_text = item_domain_content_text(item)
+    if count_domain_keyword_hits(content_text, DOMAIN_EXCLUDE_KEYWORDS):
+        item["domain_score"] = 0
+        item["domain_keyword_hits"] = 0
+        item["domain_source_hits"] = 0
+        item["domain_excluded"] = True
+        item["domain"] = domain_key
+        return 0
+
+    keyword_hits = count_domain_keyword_hits(content_text, DOMAIN_KEYWORDS[domain_key])
+    source_hits = count_domain_keyword_hits(item_domain_source_text(item), DOMAIN_SOURCE_KEYWORDS.get(domain_key, ()))
+    score = keyword_hits * 2 + min(source_hits, 4)
+    item["domain_score"] = score
+    item["domain_keyword_hits"] = keyword_hits
+    item["domain_source_hits"] = source_hits
+    item["domain"] = domain_key
+    return score
+
+
+def filter_items_by_domain(items: list[dict[str, Any]], domain: str | None) -> list[dict[str, Any]]:
+    domain_key = normalize_text(domain)
+    if not domain_key:
+        return items
+    scored = [(score_item_domain(item, domain_key), item) for item in items]
+    filtered = [item for score, item in scored if score >= 4 and int(item.get("domain_keyword_hits") or 0) >= 2]
+    filtered.sort(
+        key=lambda item: (
+            -float(item.get("heat_score") or 0),
+            -int(item.get("domain_score") or 0),
+            item.get("source_type") or "",
+            int(item.get("rank") or 9999),
+        )
+    )
+    return filtered
+
+
 def run_hot_news_query(base_dir: Path, plan: AgentPlan) -> AgentResponse:
     params = plan.params
     source_types = resolve_source_types(normalize_text(params.get("source_type")) or "mixed")
     limit = int(params.get("limit") or 10)
     window_hours = int(params.get("window_hours") or 24)
+    domain = normalize_text(params.get("domain"))
 
     merged: list[dict[str, Any]] = []
     for source_type in source_types:
         merged.extend(load_ranked_items_for_source(base_dir, source_type))
 
     merged.sort(key=lambda item: (-float(item.get("heat_score") or 0), item["source_type"], int(item.get("rank") or 9999)))
-    selected = merged[:limit]
+    filtered = filter_items_by_domain(merged, domain)
+    selected = filtered[:limit]
 
     if not selected:
-        answer = "没有找到可用的热点结果。请先运行热点发现链路，例如 `python scripts/run_hot_pipeline.py`。"
-        return AgentResponse(plan.task_type, answer, {"items": [], "plan": plan.to_dict()})
+        if domain:
+            answer = (
+                f"没有找到符合“{domain_label(domain)}”领域筛选的热点结果。"
+                "当前领域筛选发生在热点生成后的返回阶段；你可以扩大时间窗口，或先查看全部热点新闻。"
+            )
+        else:
+            answer = "没有找到可用的热点结果。请先运行热点发现链路，例如 `python scripts/run_hot_pipeline.py`。"
+        return AgentResponse(plan.task_type, answer, {"items": [], "plan": plan.to_dict(), "domain": domain or None})
 
     display_items: list[dict[str, Any]] = []
-    lines = [f"过去约 {window_hours} 小时的热点新闻如下（v1 基于本地最新热点分析结果）："]
+    if domain:
+        lines = [
+            f"过去约 {window_hours} 小时的热点{domain_label(domain)}新闻如下（v1 基于本地最新热点分析结果）：",
+            (
+                f"筛选口径：在全量热点中按标题、摘要、来源和 cluster 文章标题命中“{domain_label(domain)}”"
+                "相关规则进行返回阶段过滤；采集和聚类仍保持全量。"
+            ),
+        ]
+    else:
+        lines = [f"过去约 {window_hours} 小时的热点新闻如下（v1 基于本地最新热点分析结果）："]
     lines.extend(build_coverage_warnings(selected, window_hours))
     for index, item in enumerate(selected, start=1):
         display_item = dict(item)
@@ -693,7 +851,8 @@ def run_hot_news_query(base_dir: Path, plan: AgentPlan) -> AgentResponse:
         display_items.append(display_item)
         source_label = item["source_type"].upper()
         summary = item.get("summary") or "暂无摘要"
-        lines.append(f"{index}. [{source_label}] {item['event_title']}：{summary}")
+        domain_score_text = f"（domain_score={item.get('domain_score')}）" if domain else ""
+        lines.append(f"{index}. [{source_label}] {item['event_title']}{domain_score_text}：{summary}")
     lines.append("请问你对哪些感兴趣？你可以继续说：`请对1，2做内容整理和总结`。")
 
     session_payload = {
@@ -707,6 +866,9 @@ def run_hot_news_query(base_dir: Path, plan: AgentPlan) -> AgentResponse:
     data = {
         "plan": plan.to_dict(),
         "items": display_items,
+        "domain": domain or None,
+        "candidate_count_before_domain_filter": len(merged),
+        "candidate_count_after_domain_filter": len(filtered),
         "session_state_file": str(session_path) if session_path else None,
         "note": "v1 uses the latest generated hot/expert files. Run the pipeline before asking for fresh results.",
     }
@@ -1282,6 +1444,7 @@ def run_agent_once(
     query: str,
     task_type: str | None = None,
     source_type: str | None = None,
+    domain: str | None = None,
     limit: int | None = None,
     window_hours: int | None = None,
     auto_pipeline: bool = True,
@@ -1292,6 +1455,7 @@ def run_agent_once(
     base = base_dir or project_root()
     overrides = {
         "source_type": source_type,
+        "domain": domain,
         "limit": limit,
         "window_hours": window_hours,
     }
@@ -1319,6 +1483,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--query", "-q", help="User request to process.")
     parser.add_argument("--task-type", choices=SUPPORTED_TASK_TYPES, help="Optional explicit task type.")
     parser.add_argument("--source-type", choices=SUPPORTED_AGENT_SOURCE_TYPES, help="Optional source type.")
+    parser.add_argument("--domain", choices=tuple(DOMAIN_LABELS), help="Optional domain filter for hot news.")
     parser.add_argument("--limit", type=int, help="Optional result limit for hot news.")
     parser.add_argument("--window-hours", type=int, help="Optional time window in hours.")
     parser.add_argument("--no-auto-pipeline", action="store_true", help="Do not run missing prerequisite pipeline steps.")
@@ -1342,6 +1507,7 @@ def main() -> None:
         query=query,
         task_type=args.task_type,
         source_type=args.source_type,
+        domain=args.domain,
         limit=args.limit,
         window_hours=args.window_hours,
         auto_pipeline=not args.no_auto_pipeline,
