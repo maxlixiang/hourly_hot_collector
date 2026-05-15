@@ -94,9 +94,58 @@ def extract_article_ids(cluster: dict[str, Any]) -> list[int]:
     return fallback_ids
 
 
-def fetch_articles_by_ids(db_path: Path, article_ids: list[int]) -> list[dict[str, Any]]:
+def normalize_article(article: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(article)
+    normalized["id"] = int(normalized["id"])
+    normalized["source_type"] = normalize_text(normalized.get("source_type"))
+    normalized["source_id"] = normalize_text(normalized.get("source_id")) or None
+    normalized["source_name"] = normalize_text(normalized.get("source_name"))
+    normalized["title"] = normalize_text(normalized.get("title"))
+    normalized["url"] = normalize_text(normalized.get("url")) or None
+    normalized["summary"] = normalize_text(normalized.get("summary")) or None
+    normalized["content"] = normalize_text(normalized.get("content")) or None
+    normalized["content_fetch_status"] = normalize_text(normalized.get("content_fetch_status")) or None
+    normalized["content_fetch_error"] = normalize_text(normalized.get("content_fetch_error")) or None
+    normalized["published_at"] = normalize_text(normalized.get("published_at")) or None
+    normalized["fetched_at"] = normalize_text(normalized.get("fetched_at")) or None
+    normalized["normalized_title"] = normalize_text(normalized.get("normalized_title")) or None
+    normalized["language"] = normalize_text(normalized.get("language")) or None
+    resolved_time = resolve_article_time(normalized)
+    normalized["resolved_time"] = (
+        resolved_time.strftime("%Y-%m-%d %H:%M:%S %z") if resolved_time is not None else None
+    )
+    return normalized
+
+
+def snapshot_articles_by_id(cluster: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    snapshots: dict[int, dict[str, Any]] = {}
+    for article in cluster.get("articles", []):
+        article_id = article.get("id")
+        if article_id is None:
+            continue
+        snapshots[int(article_id)] = normalize_article(article)
+    return snapshots
+
+
+def article_matches_snapshot(article: dict[str, Any], snapshot: dict[str, Any], source_type: str) -> bool:
+    if normalize_text(article.get("source_type")) != source_type:
+        return False
+    snapshot_title = normalize_text(snapshot.get("title"))
+    if snapshot_title and normalize_text(article.get("title")) != snapshot_title:
+        return False
+    return True
+
+
+def fetch_articles_by_ids(
+    db_path: Path,
+    article_ids: list[int],
+    *,
+    source_type: str,
+    snapshots: dict[int, dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
     if not article_ids:
-        return []
+        return [], []
+    snapshots = snapshots or {}
 
     placeholders = ",".join("?" for _ in article_ids)
     query = f"""
@@ -124,31 +173,33 @@ def fetch_articles_by_ids(db_path: Path, article_ids: list[int]) -> list[dict[st
 
     row_map = {int(row["id"]): dict(row) for row in rows}
     articles: list[dict[str, Any]] = []
+    warnings: list[str] = []
     for article_id in article_ids:
-        article = row_map.get(int(article_id))
-        if article is None:
-            print(f"[WARN] Article id not found in SQLite: {article_id}")
+        snapshot = snapshots.get(int(article_id))
+        row = row_map.get(int(article_id))
+        if row is None:
+            message = f"Article id not found in SQLite: {article_id}"
+            if snapshot is None:
+                raise RuntimeError(message)
+            warnings.append(f"{message}; used hot snapshot.")
+            articles.append(snapshot)
             continue
-        article["id"] = int(article["id"])
-        article["source_type"] = normalize_text(article.get("source_type"))
-        article["source_id"] = normalize_text(article.get("source_id")) or None
-        article["source_name"] = normalize_text(article.get("source_name"))
-        article["title"] = normalize_text(article.get("title"))
-        article["url"] = normalize_text(article.get("url")) or None
-        article["summary"] = normalize_text(article.get("summary")) or None
-        article["content"] = normalize_text(article.get("content")) or None
-        article["content_fetch_status"] = normalize_text(article.get("content_fetch_status")) or None
-        article["content_fetch_error"] = normalize_text(article.get("content_fetch_error")) or None
-        article["published_at"] = normalize_text(article.get("published_at")) or None
-        article["fetched_at"] = normalize_text(article.get("fetched_at")) or None
-        article["normalized_title"] = normalize_text(article.get("normalized_title")) or None
-        article["language"] = normalize_text(article.get("language")) or None
-        resolved_time = resolve_article_time(article)
-        article["resolved_time"] = (
-            resolved_time.strftime("%Y-%m-%d %H:%M:%S %z") if resolved_time is not None else None
-        )
+
+        article = normalize_article(row)
+        if not article_matches_snapshot(article, snapshot or {}, source_type):
+            message = (
+                f"SQLite article mismatch for id={article_id}: "
+                f"sqlite_source_type={article.get('source_type')}, expected_source_type={source_type}, "
+                f"sqlite_title={article.get('title')!r}, snapshot_title={normalize_text((snapshot or {}).get('title'))!r}"
+            )
+            if snapshot is None:
+                raise RuntimeError(message)
+            warnings.append(f"{message}; used hot snapshot.")
+            articles.append(snapshot)
+            continue
+
         articles.append(article)
-    return articles
+    return articles, warnings
 
 
 def build_timeline(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -213,11 +264,28 @@ def build_contexts_for_source_type(
 
     hot_clusters_file = input_file or find_latest_hot_clusters_file(base_dir, source_type)
     payload = load_hot_clusters(hot_clusters_file)
+    payload_source_type = normalize_text(payload.get("source_type"))
+    if payload_source_type != source_type:
+        raise ValueError(
+            f"Hot cluster file source_type mismatch: expected {source_type}, got {payload_source_type or 'empty'} "
+            f"from {hot_clusters_file}"
+        )
     contexts: list[dict[str, Any]] = []
+    context_warnings: list[str] = []
 
     for cluster in payload.get("clusters", []):
         article_ids = extract_article_ids(cluster)
-        articles = fetch_articles_by_ids(db_path, article_ids)
+        snapshots = snapshot_articles_by_id(cluster)
+        articles, article_warnings = fetch_articles_by_ids(
+            db_path,
+            article_ids,
+            source_type=source_type,
+            snapshots=snapshots,
+        )
+        for warning in article_warnings:
+            cluster_warning = f"cluster_id={cluster.get('cluster_id')}: {warning}"
+            print(f"[WARN] {cluster_warning}")
+            context_warnings.append(cluster_warning)
         articles_sorted_desc = sorted(
             articles,
             key=lambda article: resolve_article_time(article) or datetime.min.replace(tzinfo=ZoneInfo(TIMEZONE)),
@@ -237,6 +305,7 @@ def build_contexts_for_source_type(
                 "articles": articles_sorted_desc,
                 "timeline": build_timeline(articles_sorted_desc),
                 "context_stats": build_context_stats(articles_sorted_desc),
+                "context_warnings": article_warnings,
             }
         )
 
@@ -249,6 +318,7 @@ def build_contexts_for_source_type(
         "source_type": source_type,
         "source_hot_clusters_file": str(hot_clusters_file),
         "cluster_count": len(contexts),
+        "context_warnings": context_warnings,
         "contexts": contexts,
     }
     output_path.write_text(json.dumps(output_payload, ensure_ascii=False, indent=2), encoding="utf-8")

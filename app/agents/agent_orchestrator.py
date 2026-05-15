@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -337,6 +338,34 @@ def step_outputs_current(base_dir: Path, step_name: str, plan: AgentPlan) -> boo
     return all(source_step_output_current(base_dir, step_name, source_type, window_hours) for source_type in source_types)
 
 
+def hot_files_for_plan(base_dir: Path, plan: AgentPlan) -> list[Path]:
+    window_hours = requested_window_hours(plan)
+    paths: list[Path] = []
+    for source_type in resolve_source_types(normalize_text(plan.params.get("source_type")) or "mixed"):
+        path = latest_hot_file_for_window(base_dir, source_type, window_hours)
+        if path is None:
+            raise FileNotFoundError(
+                f"No hot cluster file found for source_type={source_type}, window_hours={window_hours}"
+            )
+        paths.append(path)
+    return paths
+
+
+def hot_files_for_plan_since(base_dir: Path, plan: AgentPlan, started_at: float) -> list[Path]:
+    paths = hot_files_for_plan(base_dir, plan)
+    stale_paths = [
+        path
+        for path in paths
+        if path.stat().st_mtime < started_at - 1.0
+    ]
+    if stale_paths:
+        raise RuntimeError(
+            "Hot pipeline did not generate fresh hot cluster files for this run: "
+            + ", ".join(str(path) for path in stale_paths)
+        )
+    return paths
+
+
 def load_latest_context_map(base_dir: Path, source_type: str) -> tuple[dict[str, dict[str, Any]], Path | None]:
     path = find_latest_file(base_dir, CONTEXT_DIR, CONTEXT_PATTERN.format(source_type=source_type))
     if path is None:
@@ -494,14 +523,18 @@ def build_coverage_warnings(items: list[dict[str, Any]], requested_window_hours:
 
     warnings: list[str] = []
     for source_type, coverage in sorted(by_source.items()):
-        if bool(coverage.get("coverage_complete")):
-            continue
         actual_hours = coverage.get("actual_covered_hours")
         if actual_hours is None:
             continue
+        try:
+            actual_hours_number = float(actual_hours)
+        except (TypeError, ValueError):
+            continue
+        if actual_hours_number >= requested_window_hours * 0.95:
+            continue
         source_label = source_type.upper()
         warnings.append(
-            f"提示：{source_label} 当前数据库没有完整的最新 {requested_window_hours} 小时数据，"
+            f"提示：{source_label} 当前数据库没有完整的最近 {requested_window_hours} 个完整小时数据，"
             f"现有数据库约覆盖过去 {format_hours(actual_hours)} 小时，下面仅根据这部分数据给出分析结果。"
         )
     return warnings
@@ -546,12 +579,8 @@ def has_knowledge_sources(base_dir: Path) -> bool:
     return any((base_dir / "data/knowledge/sources").glob("**/*.txt"))
 
 
-def run_pipeline_script(base_dir: Path, step_name: str, plan: AgentPlan | None = None) -> None:
-    script = normalize_text(PIPELINE_STEPS[step_name]["script"])
-    print(f"[PIPELINE] Running {script}")
-    command = [sys.executable, script]
-    if step_name == "hot" and plan is not None:
-        command.extend(["--window-hours", str(requested_window_hours(plan))])
+def run_pipeline_command(base_dir: Path, command: list[str], label: str) -> None:
+    print(f"[PIPELINE] Running {label}")
     completed = subprocess.run(
         command,
         cwd=base_dir,
@@ -560,7 +589,27 @@ def run_pipeline_script(base_dir: Path, step_name: str, plan: AgentPlan | None =
         errors="replace",
     )
     if completed.returncode != 0:
-        raise RuntimeError(f"Pipeline step failed: {script} (exit code {completed.returncode})")
+        raise RuntimeError(f"Pipeline step failed: {label} (exit code {completed.returncode})")
+
+
+def run_pipeline_script(base_dir: Path, step_name: str, plan: AgentPlan | None = None) -> None:
+    script = normalize_text(PIPELINE_STEPS[step_name]["script"])
+    command = [sys.executable, script]
+    if step_name == "hot" and plan is not None:
+        command.extend(["--window-hours", str(requested_window_hours(plan))])
+    if step_name == "llm" and plan is not None:
+        writer_mode = "expert" if plan.task_type == "expert_topic_analysis" else "news"
+        command.extend(["--mode", writer_mode])
+    run_pipeline_command(base_dir, command, script)
+
+
+def run_context_builder_for_hot_files(base_dir: Path, hot_files: list[Path]) -> None:
+    script = normalize_text(PIPELINE_STEPS["context"]["script"])
+    if not hot_files:
+        raise RuntimeError("Context builder requires explicit hot cluster files from the current run.")
+    for hot_file in hot_files:
+        command = [sys.executable, script, "--input-file", str(hot_file)]
+        run_pipeline_command(base_dir, command, f"{script} --input-file {hot_file}")
 
 
 def required_pipeline_steps(plan: AgentPlan, skip_llm: bool) -> list[str]:
@@ -576,7 +625,6 @@ def required_pipeline_steps(plan: AgentPlan, skip_llm: bool) -> list[str]:
         return steps
 
     if plan.task_type == "hot_news_query":
-        steps.extend(["knowledge", "retrieved", "expert"])
         if not skip_llm:
             steps.append("llm")
         return steps
@@ -591,12 +639,29 @@ def ensure_pipeline_outputs(
     skip_llm: bool = False,
 ) -> list[dict[str, str]]:
     results: list[dict[str, str]] = []
+    current_hot_files: list[Path] = []
     for step_name in required_pipeline_steps(plan, skip_llm):
         if step_name == "knowledge" and not has_knowledge_sources(base_dir):
             results.append({"step": step_name, "status": "skipped", "reason": "no knowledge txt sources"})
             continue
 
+        if step_name == "context":
+            if not current_hot_files:
+                current_hot_files = hot_files_for_plan(base_dir, plan)
+            run_context_builder_for_hot_files(base_dir, current_hot_files)
+            results.append(
+                {
+                    "step": step_name,
+                    "status": "generated",
+                    "input_files": [str(path) for path in current_hot_files],
+                }
+            )
+            continue
+
+        started_at = time.time()
         run_pipeline_script(base_dir, step_name, plan)
+        if step_name == "hot":
+            current_hot_files = hot_files_for_plan_since(base_dir, plan, started_at)
         results.append({"step": step_name, "status": "generated"})
     return results
 
@@ -647,19 +712,36 @@ def run_hot_news_query(base_dir: Path, plan: AgentPlan) -> AgentResponse:
     return AgentResponse(plan.task_type, "\n".join(lines), data)
 
 
-def pick_representative_articles(articles: list[dict[str, Any]], max_sources: int = 8) -> list[dict[str, Any]]:
-    by_source: dict[str, dict[str, Any]] = {}
+def pick_cluster_articles(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        articles,
+        key=lambda article: parse_dt(article.get("resolved_time") or article.get("published_at") or article.get("fetched_at"))
+        or datetime.min.replace(tzinfo=ZoneInfo(TIMEZONE)),
+        reverse=True,
+    )
+
+
+def build_source_distribution(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counts: dict[str, int] = {}
     for article in articles:
-        source = normalize_text(article.get("source_name")) or "Unknown source"
-        existing = by_source.get(source)
-        if existing is None:
-            by_source[source] = article
-            continue
-        existing_time = parse_dt(existing.get("resolved_time") or existing.get("published_at") or existing.get("fetched_at"))
-        article_time = parse_dt(article.get("resolved_time") or article.get("published_at") or article.get("fetched_at"))
-        if article_time and (existing_time is None or article_time > existing_time):
-            by_source[source] = article
-    return list(by_source.values())[:max_sources]
+        source_name = normalize_text(article.get("source_name")) or "Unknown source"
+        counts[source_name] = counts.get(source_name, 0) + 1
+    return [
+        {"source_name": source_name, "article_count": count}
+        for source_name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def format_source_distribution(distribution: list[dict[str, Any]]) -> str:
+    if not distribution:
+        return "来源统计：共 0 个来源，0 条文章。"
+    total_sources = len(distribution)
+    total_articles = sum(int(item.get("article_count") or 0) for item in distribution)
+    parts = [
+        f"{normalize_text(item.get('source_name')) or 'Unknown source'} {int(item.get('article_count') or 0)} 条"
+        for item in distribution
+    ]
+    return f"来源统计：共 {total_sources} 个来源，{total_articles} 条文章；" + "，".join(parts) + "。"
 
 
 def objective_article_summary(
@@ -778,11 +860,18 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
             lines.append(f"\n新闻{selected_index}：没有在上一轮热点列表中找到这个编号。")
             continue
 
-        articles = pick_representative_articles(hot_item.get("articles", []), max_sources=5)
+        articles = pick_cluster_articles(hot_item.get("articles", []))
         lines.append(f"\n新闻{selected_index}：{hot_item.get('event_title')}")
+        source_distribution = build_source_distribution(articles)
+        lines.append(format_source_distribution(source_distribution))
         if not articles:
             lines.append("暂时没有找到可展开的文章列表。")
-            results.append({"display_index": selected_index, "event_title": hot_item.get("event_title"), "sources": []})
+            results.append({
+                "display_index": selected_index,
+                "event_title": hot_item.get("event_title"),
+                "source_distribution": source_distribution,
+                "sources": [],
+            })
             continue
 
         source_summaries: list[dict[str, Any]] = []
@@ -832,6 +921,7 @@ def run_source_summary_request(base_dir: Path, plan: AgentPlan) -> AgentResponse
                 "source_type": hot_item.get("source_type"),
                 "cluster_id": hot_item.get("cluster_id"),
                 "event_title": hot_item.get("event_title"),
+                "source_distribution": source_distribution,
                 "sources": source_summaries,
             }
         )

@@ -94,10 +94,21 @@ def normalize_window_hours(window_hours: int | str | None) -> int:
     return max(1, min(24 * 30, parsed))
 
 
+def floor_to_hour(value: datetime) -> datetime:
+    return value.replace(minute=0, second=0, microsecond=0)
+
+
+def resolve_complete_hour_window(now_dt: datetime, window_hours: int) -> tuple[datetime, datetime]:
+    end_dt = floor_to_hour(now_dt)
+    start_dt = end_dt - timedelta(hours=window_hours)
+    return start_dt, end_dt
+
+
 def load_articles_from_sqlite(
     base_dir: Path,
     source_type: str,
     analysis_window_hours: int = DEFAULT_ANALYSIS_WINDOW_HOURS,
+    now_dt: datetime | None = None,
 ) -> list[dict[str, Any]]:
     db_path = base_dir / DB_FILE
     if not db_path.exists():
@@ -106,10 +117,11 @@ def load_articles_from_sqlite(
     if source_type not in SUPPORTED_SOURCE_TYPES:
         raise ValueError(f"Unsupported source_type: {source_type}")
 
-    now_dt = datetime.now(ZoneInfo(TIMEZONE))
+    resolved_now_dt = now_dt or datetime.now(ZoneInfo(TIMEZONE))
     window_hours = normalize_window_hours(analysis_window_hours)
-    cutoff_dt = now_dt - timedelta(hours=window_hours)
-    cutoff_text = cutoff_dt.strftime("%Y-%m-%d %H:%M:%S %z")
+    window_start_dt, window_end_dt = resolve_complete_hour_window(resolved_now_dt, window_hours)
+    window_start_text = window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z")
+    window_end_text = window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z")
 
     query = """
         SELECT
@@ -129,14 +141,28 @@ def load_articles_from_sqlite(
           AND title IS NOT NULL
           AND TRIM(title) != ''
           AND (
-                (published_at IS NOT NULL AND TRIM(published_at) != '' AND published_at >= ?)
-             OR ((published_at IS NULL OR TRIM(published_at) = '') AND (fetched_at IS NOT NULL AND TRIM(fetched_at) != '' AND fetched_at >= ?))
+                (
+                    published_at IS NOT NULL
+                    AND TRIM(published_at) != ''
+                    AND published_at >= ?
+                    AND published_at < ?
+                )
+             OR (
+                    (published_at IS NULL OR TRIM(published_at) = '')
+                    AND fetched_at IS NOT NULL
+                    AND TRIM(fetched_at) != ''
+                    AND fetched_at >= ?
+                    AND fetched_at < ?
+                )
           )
         ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC
     """
 
     with get_connection(db_path) as connection:
-        rows = connection.execute(query, (source_type, cutoff_text, cutoff_text)).fetchall()
+        rows = connection.execute(
+            query,
+            (source_type, window_start_text, window_end_text, window_start_text, window_end_text),
+        ).fetchall()
 
     articles: list[dict[str, Any]] = []
     for row in rows:
@@ -153,7 +179,7 @@ def load_articles_from_sqlite(
         article["language"] = normalize_text(article.get("language")) or None
 
         resolved_time = resolve_article_time(article)
-        if resolved_time is None or resolved_time < cutoff_dt:
+        if resolved_time is None or resolved_time < window_start_dt or resolved_time >= window_end_dt:
             continue
         article["resolved_time"] = resolved_time.strftime("%Y-%m-%d %H:%M:%S %z")
         articles.append(article)
@@ -522,7 +548,8 @@ def build_cluster_summaries(
 
 def build_data_coverage(
     articles: list[dict[str, Any]],
-    now_dt: datetime,
+    window_start_dt: datetime,
+    window_end_dt: datetime,
     requested_window_hours: int,
 ) -> dict[str, Any]:
     article_times = [
@@ -535,22 +562,23 @@ def build_data_coverage(
             "requested_window_hours": requested_window_hours,
             "actual_covered_hours": 0.0,
             "coverage_complete": False,
+            "window_start_time": window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
+            "window_end_time": window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
             "earliest_item_time": None,
             "latest_item_time": None,
-            "latest_item_age_hours": None,
         }
 
     earliest_time = min(valid_times)
     latest_time = max(valid_times)
-    actual_covered_hours = max(0.0, (now_dt - earliest_time).total_seconds() / 3600)
-    latest_item_age_hours = max(0.0, (now_dt - latest_time).total_seconds() / 3600)
+    actual_covered_hours = max(0.0, (window_end_dt - earliest_time).total_seconds() / 3600)
     return {
         "requested_window_hours": requested_window_hours,
         "actual_covered_hours": round(min(actual_covered_hours, float(requested_window_hours)), 2),
         "coverage_complete": actual_covered_hours >= requested_window_hours * 0.95,
+        "window_start_time": window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "window_end_time": window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
         "earliest_item_time": earliest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
         "latest_item_time": latest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
-        "latest_item_age_hours": round(latest_item_age_hours, 2),
     }
 
 
@@ -569,7 +597,8 @@ def run_pipeline_for_source_type(
 ) -> Path:
     now_dt = datetime.now(ZoneInfo(TIMEZONE))
     window_hours = normalize_window_hours(analysis_window_hours)
-    raw_articles = load_articles_from_sqlite(base_dir, source_type, window_hours)
+    window_start_dt, window_end_dt = resolve_complete_hour_window(now_dt, window_hours)
+    raw_articles = load_articles_from_sqlite(base_dir, source_type, window_hours, now_dt)
     if not raw_articles:
         raise RuntimeError(f"No recent {source_type} news items were loaded from SQLite.")
 
@@ -603,12 +632,19 @@ def run_pipeline_for_source_type(
         article["cluster_id"] = f"c_{int(labels[index])}"
 
     cluster_summaries = build_cluster_summaries(kept_articles, embeddings, labels, now_dt)
-    data_coverage = build_data_coverage(raw_articles, now_dt, window_hours)
+    data_coverage = build_data_coverage(raw_articles, window_start_dt, window_end_dt, window_hours)
     payload = {
         "generated_at": now_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
         "source_type": source_type,
         "db_file": str((base_dir / DB_FILE).resolve()),
         "analysis_window_hours": window_hours,
+        "analysis_window": {
+            "mode": "last_complete_hours",
+            "start_time": window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
+            "end_time": window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
+            "includes_start": True,
+            "includes_end": False,
+        },
         "data_coverage": data_coverage,
         "model_name": MODEL_NAME,
         "similarity_threshold": float(config["similarity_threshold"]),

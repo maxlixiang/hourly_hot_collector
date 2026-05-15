@@ -115,7 +115,7 @@ Collector scheduling:
 
 `app/agents/`
 
-- `agent_orchestrator.py`: lightweight conversation orchestrator. It can auto-run missing prerequisite pipeline scripts, then dispatch the request by task type.
+- `agent_orchestrator.py`: lightweight conversation orchestrator. It auto-runs prerequisite pipeline scripts for each query, then dispatches the request by task type.
 - `task_planner.py`: rule-based planner for `hot_news_query`, `source_summary_request`, and `expert_topic_analysis`.
 - `article_reader.py`: compatibility wrapper. Do not add new extraction logic here.
 - `memory_store.py`: lightweight file-backed memory for latest hot list and recent interactions.
@@ -205,16 +205,23 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 
 Useful flags:
 
-- `--no-auto-pipeline`: do not run missing prerequisite scripts.
-- `--force-pipeline`: regenerate prerequisite outputs before answering.
+- `--no-auto-pipeline`: do not run prerequisite scripts.
+- `--force-pipeline`: retained for CLI compatibility; automatic pipeline mode already regenerates prerequisite outputs on each query.
 - `--skip-llm`: skip the LLM writer during automatic pipeline preparation.
 - `--json`: print the full structured response.
 
 Prerequisite scheduling:
 
 - `source_summary_request` uses the previous hot-news session state and does not run the full pipeline automatically.
-- `hot_news_query` can run/reuse hot topic, context, basic analysis, knowledge ingestion, retriever, expert report, and LLM writer outputs.
-- `expert_topic_analysis` can run/reuse the same analysis chain, then searches generated expert/LLM reports.
+- Expert capability is intentionally opt-in. The planner should only infer `expert_topic_analysis` when the user query explicitly contains `专家`; generic words like “分析”, “预测”, “影响”, “判断”, or “怎么看” must stay on the ordinary news path unless `--task-type expert_topic_analysis` is provided.
+- `hot_news_query` regenerates hot topic, context, basic analysis, and `run_llm_expert_writer --mode news` on each query unless `--no-auto-pipeline` is set. It must stay source-grounded and must not add expert interpretation.
+- `expert_topic_analysis` regenerates hot topic, context, basic analysis, knowledge ingestion, retriever, expert report, and `run_llm_expert_writer --mode expert`, then searches the newly generated expert/LLM reports unless `--no-auto-pipeline` is set.
+- User-requested time windows flow into `run_hot_pipeline.py`. For example, `告诉我过去24小时的10条热点新闻` becomes `python scripts/run_hot_pipeline.py --window-hours 24`.
+- `agent_orchestrator.py` must pass the current run's hot cluster files to `run_context_builder.py --input-file ...`; do not let context building guess hot files via glob ordering. This prevents mixing old 5h/24h hot outputs into a 3h request.
+- Hot topic windows use the last N complete hours, not a rolling window to the current minute. If current time is 18:42 and the user asks for the past 3 hours, analyze `[15:00, 18:00)`, i.e. the complete 15, 16, and 17 o'clock hours.
+- Hot cluster outputs record `analysis_window_hours`, `analysis_window`, and `data_coverage`. If the database does not cover the full requested complete-hour window, the final Agent answer should warn the user, e.g. “当前数据库没有完整的最近 24 个完整小时数据，现有数据库约覆盖过去 5 小时，下面仅根据这部分数据给出分析结果。”
+- `cluster_context_builder.py` validates hot file `source_type`. When SQLite article ids point to a different source/title than the hot cluster embedded snapshot, it uses the hot snapshot and records/prints a warning instead of silently attaching unrelated articles.
+- Token cost: only `run_llm_expert_writer` calls an OpenAI-compatible chat completions endpoint, and only when `LLM_EXPERT_WRITER_API_KEY`, `LLM_EXPERT_WRITER_BASE_URL`, and `LLM_EXPERT_WRITER_MODEL` are configured. `--mode news` is ordinary source-grounded news briefing; `--mode expert` is the expert-analysis expression layer. `hot` uses local sentence-transformers embeddings and sklearn clustering; context/basic/knowledge/retrieved/expert are local processing steps.
 
 Source-summary behavior:
 
@@ -241,6 +248,7 @@ Notes:
 - Cache version is controlled by `EXTRACTOR_VERSION`; bump it when changing extraction semantics.
 - `content_fetch_status` should distinguish full text from summary-only fallbacks. Bloomberg/NYT/MarketWatch/WSJ/Economist-style blocked pages should remain useful RSS signals, but should not be presented as full text.
 - Fox News World currently uses `rss_content` because its RSS items include usable body text in `content:encoded`.
+- For `source_summary_request` such as `请对1做内容整理`, the Agent should read every article link in the selected hot cluster. Do not cap this at 5 sources and do not deduplicate by media/source name; if one media outlet has multiple articles in the cluster, keep all of them. Sort them by article time descending.
 - The final answer must stay objective for `source_summary_request`: no expert interpretation, no subjective embellishment.
 - `reflection_checker.py` may append self-check notes when source reads fail or summaries fall back to local data.
 
@@ -270,8 +278,9 @@ It uses OpenAI-compatible `/chat/completions`.
 
 Important guardrails:
 
-- Structural fields must always inherit from the original `expert_report`.
-- The LLM may only write narrative fields such as `final_summary`, `expert_analysis`, `why_it_really_matters`, `key_risk`, `uncertainty`, `watch_points`, and `podcast_hook`.
+- `llm_expert_writer.py` has two modes. `--mode news` reads cluster context plus basic analysis and writes source-grounded news briefing fields such as `final_summary`, `source_grounded_summary`, `known_facts`, and `uncertainties`; it must not populate expert interpretation. `--mode expert` reads `expert_report` and may write expert-analysis fields.
+- Structural fields must always inherit from the upstream source item.
+- In expert mode, the LLM may only write narrative fields such as `final_summary`, `expert_analysis`, `why_it_really_matters`, `key_risk`, `uncertainty`, `watch_points`, and `podcast_hook`.
 - If the API fails, returns empty content, returns malformed JSON, or trips guardrails, fallback output is used.
 
 Do not loosen these guardrails casually. The user cares about traceability and schema stability.
@@ -512,7 +521,7 @@ documents.jsonl + chunks.jsonl
 
 `app/agents/`
 
-- `agent_orchestrator.py`：轻量对话编排器。可以自动运行缺失的前置 pipeline 脚本，再按 task type 分发请求。
+- `agent_orchestrator.py`：轻量对话编排器。每次查询都会自动运行所需的前置 pipeline 脚本，再按 task type 分发请求。
 - `task_planner.py`：规则版任务规划器，当前只识别 `hot_news_query`、`source_summary_request`、`expert_topic_analysis`。
 - `article_reader.py`：兼容转发层。不要在这里继续新增正文提取逻辑。
 - `memory_store.py`：轻量文件记忆，保存上一轮热点列表和最近交互。
@@ -592,16 +601,23 @@ python scripts/run_agents.py --query "从专家的角度，分析过去一周关
 
 常用参数：
 
-- `--no-auto-pipeline`：不自动运行缺失的前置脚本。
-- `--force-pipeline`：回答前强制重新生成前置产物。
+- `--no-auto-pipeline`：不自动运行前置脚本。
+- `--force-pipeline`：为兼容旧命令保留；默认自动流水线已经会在每次查询时重新生成前置产物。
 - `--skip-llm`：自动流水线中跳过 LLM writer。
 - `--json`：输出完整结构化响应。
 
 前置流水线调度：
 
 - `source_summary_request` 依赖上一轮热点列表的 session state，不自动运行完整 pipeline。
-- `hot_news_query` 可以自动运行或复用 hot topic、context、basic analysis、knowledge ingest、retriever、expert report、LLM writer。
-- `expert_topic_analysis` 会复用已有 expert / LLM report，并基于关键词匹配相关结果。
+- 专家能力必须保持显式触发。planner 只有在用户 query 明确包含“专家”二字时，才应推断为 `expert_topic_analysis`；“分析”“预测”“影响”“判断”“怎么看”等泛化词如果没有“专家”，必须继续走普通新闻路径，除非命令显式传入 `--task-type expert_topic_analysis`。
+- `hot_news_query` 默认每次查询都重新生成 hot topic、context、basic analysis、`run_llm_expert_writer --mode news`，除非显式使用 `--no-auto-pipeline`。普通热点查询必须保持普通新闻事实整理，不加入专家推断。
+- `expert_topic_analysis` 默认会重新生成 hot topic、context、basic analysis、knowledge ingest、retriever、expert report、`run_llm_expert_writer --mode expert`，然后在本轮生成的 expert / LLM report 中做关键词匹配，除非显式使用 `--no-auto-pipeline`。
+- 用户请求的时间窗口会传入 `run_hot_pipeline.py`。例如 `告诉我过去24小时的10条热点新闻` 会变成 `python scripts/run_hot_pipeline.py --window-hours 24`。
+- `agent_orchestrator.py` 必须把本轮 hot cluster 文件显式传给 `run_context_builder.py --input-file ...`；不要让 context builder 通过 glob 排序猜 hot 文件，避免 3 小时请求混入旧的 5h/24h 热点结果。
+- hot topic 时间窗口采用最近 N 个完整小时，而不是滚动到当前分钟。例如当前时间 18:42，用户要求过去 3 小时，应分析 `[15:00, 18:00)`，也就是 15、16、17 三个完整小时。
+- hot cluster 输出会记录 `analysis_window_hours`、`analysis_window` 和 `data_coverage`。如果数据库不满足完整请求窗口，最终 Agent 回答需要提醒用户，例如：“当前数据库没有完整的最近 24 个完整小时数据，现有数据库约覆盖过去 5 小时，下面仅根据这部分数据给出分析结果。”
+- `cluster_context_builder.py` 会校验 hot 文件的 `source_type`。如果 SQLite 中同一个 article id 已经指向不同来源或不同标题，会优先使用 hot cluster 内嵌的文章快照，并记录/打印 warning，不能静默挂上不相干文章。
+- token 成本：只有 `run_llm_expert_writer` 会在配置了 `LLM_EXPERT_WRITER_API_KEY`、`LLM_EXPERT_WRITER_BASE_URL`、`LLM_EXPERT_WRITER_MODEL` 时调用 OpenAI-compatible chat completions 并消耗 LLM token。`--mode news` 是普通新闻事实整理，只基于来源标题、摘要和上下文做客观归纳；`--mode expert` 才是专家分析表达层。`hot` 使用本地 sentence-transformers embedding 和 sklearn 聚类；context/basic/knowledge/retrieved/expert 都是本地处理。
 
 来源整理链路：
 
@@ -628,6 +644,7 @@ RSS 源策略
 - `EXTRACTOR_VERSION` 控制缓存版本；修改正文提取语义时要 bump 版本。
 - `content_fetch_status` 用来区分全文和摘要兜底。Bloomberg / NYT / MarketWatch / WSJ / Economist 这类被 401/403/paywall 或授权限制挡住的页面，应继续作为 RSS 新闻信号保留，但不要伪装成全文。
 - Fox News World 当前使用 `rss_content`，因为它的 RSS item 在 `content:encoded` 里提供可用正文。
+- 对 `请对1做内容整理` 这类 `source_summary_request`，Agent 应读取所选热点 cluster 里的全部文章链接。不要限制最多 5 个来源，也不要按媒体/source name 去重；同一媒体在同一 cluster 中出现多篇文章时全部保留。输出顺序按文章时间从新到旧。
 - `source_summary_request` 必须保持客观来源整理口径：不加入专家判断，不做主观发挥。
 - `reflection_checker.py` 会在原文读取失败或摘要兜底时追加自检提示。
 
@@ -657,8 +674,9 @@ LLM_EXPERT_WRITER_TEMPERATURE=0.4
 
 重要护栏：
 
-- 结构字段必须永远从原始 `expert_report` 继承。
-- LLM 只能生成叙事字段，例如 `final_summary`、`expert_analysis`、`why_it_really_matters`、`key_risk`、`uncertainty`、`watch_points`、`podcast_hook`。
+- `llm_expert_writer.py` 有两个模式。`--mode news` 读取 cluster context + basic analysis，生成 `final_summary`、`source_grounded_summary`、`known_facts`、`uncertainties` 等普通新闻事实整理字段，不应填充专家解释；`--mode expert` 读取 `expert_report`，才允许生成专家分析字段。
+- 结构字段必须永远从上游 source item 继承。
+- expert 模式下，LLM 只能生成叙事字段，例如 `final_summary`、`expert_analysis`、`why_it_really_matters`、`key_risk`、`uncertainty`、`watch_points`、`podcast_hook`。
 - 如果 API 失败、返回空内容、返回坏 JSON 或触发 guardrail，则使用 fallback 输出。
 
 不要随意放松这些护栏。用户很重视可追踪性和 schema 稳定性。

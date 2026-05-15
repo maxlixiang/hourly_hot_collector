@@ -129,7 +129,7 @@ def infer_task_type(query: str, explicit_task_type: str | None = None) -> tuple[
     notes: list[str] = []
 
     source_summary_cues = ("总结", "整理", "主要观点", "来源", "原文", "内容")
-    expert_cues = ("专家", "预测", "影响", "分析一下", "从专家", "怎么看", "判断")
+    expert_cues = ("专家",)
     hot_cues = ("热点", "热门", "过去", "最近", "新闻")
 
     if selected_indexes and any(cue in normalized for cue in source_summary_cues):
