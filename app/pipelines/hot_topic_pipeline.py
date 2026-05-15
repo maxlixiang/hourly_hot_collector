@@ -80,6 +80,9 @@ def get_connection(db_path: Path) -> sqlite3.Connection:
 
 
 def resolve_article_time(article: dict[str, Any]) -> datetime | None:
+    resolved_at = parse_datetime_object(article.get("resolved_time"))
+    if resolved_at is not None:
+        return resolved_at
     published_at = parse_datetime_object(article.get("published_at"))
     if published_at is not None:
         return published_at
@@ -104,6 +107,19 @@ def resolve_complete_hour_window(now_dt: datetime, window_hours: int) -> tuple[d
     return start_dt, end_dt
 
 
+def has_observations_table(connection: sqlite3.Connection) -> bool:
+    row = connection.execute(
+        """
+        SELECT 1
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'news_item_observations'
+        LIMIT 1
+        """
+    ).fetchone()
+    return row is not None
+
+
 def load_articles_from_sqlite(
     base_dir: Path,
     source_type: str,
@@ -123,48 +139,130 @@ def load_articles_from_sqlite(
     window_start_text = window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z")
     window_end_text = window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z")
 
-    query = """
-        SELECT
-            id,
-            source_type,
-            source_id,
-            source_name,
-            title,
-            url,
-            summary,
-            published_at,
-            fetched_at,
-            normalized_title,
-            language
-        FROM news_items
-        WHERE source_type = ?
-          AND title IS NOT NULL
-          AND TRIM(title) != ''
-          AND (
-                (
-                    published_at IS NOT NULL
-                    AND TRIM(published_at) != ''
-                    AND published_at >= ?
-                    AND published_at < ?
-                )
-             OR (
-                    (published_at IS NULL OR TRIM(published_at) = '')
-                    AND fetched_at IS NOT NULL
-                    AND TRIM(fetched_at) != ''
-                    AND fetched_at >= ?
-                    AND fetched_at < ?
-                )
-          )
-        ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC
-    """
-
     with get_connection(db_path) as connection:
-        rows = connection.execute(
-            query,
-            (source_type, window_start_text, window_end_text, window_start_text, window_end_text),
-        ).fetchall()
+        observations_available = has_observations_table(connection)
+        if observations_available:
+            query = """
+                SELECT
+                    n.id,
+                    n.source_type,
+                    n.source_id,
+                    o.source_name AS source_name,
+                    n.title,
+                    n.url,
+                    n.summary,
+                    COALESCE(o.published_at, n.published_at) AS published_at,
+                    o.fetched_at AS fetched_at,
+                    n.normalized_title,
+                    n.language,
+                    o.raw_item_index AS observation_rank,
+                    o.fetched_at AS observation_fetched_at
+                FROM news_item_observations o
+                JOIN news_items n ON n.id = o.news_item_id
+                WHERE o.source_type = ?
+                  AND n.title IS NOT NULL
+                  AND TRIM(n.title) != ''
+                  AND o.fetched_at >= ?
+                  AND o.fetched_at < ?
 
-    articles: list[dict[str, Any]] = []
+                UNION ALL
+
+                SELECT
+                    n.id,
+                    n.source_type,
+                    n.source_id,
+                    n.source_name,
+                    n.title,
+                    n.url,
+                    n.summary,
+                    n.published_at,
+                    n.fetched_at,
+                    n.normalized_title,
+                    n.language,
+                    n.raw_item_index AS observation_rank,
+                    n.fetched_at AS observation_fetched_at
+                FROM news_items n
+                WHERE n.source_type = ?
+                  AND n.title IS NOT NULL
+                  AND TRIM(n.title) != ''
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM news_item_observations o
+                      WHERE o.news_item_id = n.id
+                  )
+                  AND (
+                        (
+                            n.published_at IS NOT NULL
+                            AND TRIM(n.published_at) != ''
+                            AND n.published_at >= ?
+                            AND n.published_at < ?
+                        )
+                     OR (
+                            (n.published_at IS NULL OR TRIM(n.published_at) = '')
+                            AND n.fetched_at IS NOT NULL
+                            AND TRIM(n.fetched_at) != ''
+                            AND n.fetched_at >= ?
+                            AND n.fetched_at < ?
+                        )
+                  )
+                ORDER BY fetched_at DESC, id DESC
+            """
+            rows = connection.execute(
+                query,
+                (
+                    source_type,
+                    window_start_text,
+                    window_end_text,
+                    source_type,
+                    window_start_text,
+                    window_end_text,
+                    window_start_text,
+                    window_end_text,
+                ),
+            ).fetchall()
+        else:
+            query = """
+                SELECT
+                    id,
+                    source_type,
+                    source_id,
+                    source_name,
+                    title,
+                    url,
+                    summary,
+                    published_at,
+                    fetched_at,
+                    normalized_title,
+                    language,
+                    raw_item_index AS observation_rank,
+                    fetched_at AS observation_fetched_at
+                FROM news_items
+                WHERE source_type = ?
+                  AND title IS NOT NULL
+                  AND TRIM(title) != ''
+                  AND (
+                        (
+                            published_at IS NOT NULL
+                            AND TRIM(published_at) != ''
+                            AND published_at >= ?
+                            AND published_at < ?
+                        )
+                     OR (
+                            (published_at IS NULL OR TRIM(published_at) = '')
+                            AND fetched_at IS NOT NULL
+                            AND TRIM(fetched_at) != ''
+                            AND fetched_at >= ?
+                            AND fetched_at < ?
+                        )
+                  )
+                ORDER BY COALESCE(published_at, fetched_at) DESC, id DESC
+            """
+            rows = connection.execute(
+                query,
+                (source_type, window_start_text, window_end_text, window_start_text, window_end_text),
+            ).fetchall()
+
+    observation_rows: list[dict[str, Any]] = []
     for row in rows:
         article = dict(row)
         article["title"] = normalize_text(article.get("title"))
@@ -178,12 +276,80 @@ def load_articles_from_sqlite(
         article["source_id"] = normalize_text(article.get("source_id")) or None
         article["language"] = normalize_text(article.get("language")) or None
 
-        resolved_time = resolve_article_time(article)
+        observation_fetched_at = parse_datetime_object(article.get("observation_fetched_at"))
+        resolved_time = observation_fetched_at or resolve_article_time(article)
         if resolved_time is None or resolved_time < window_start_dt or resolved_time >= window_end_dt:
             continue
         article["resolved_time"] = resolved_time.strftime("%Y-%m-%d %H:%M:%S %z")
+        article["observation_time"] = (
+            observation_fetched_at.strftime("%Y-%m-%d %H:%M:%S %z")
+            if observation_fetched_at is not None
+            else article["resolved_time"]
+        )
+        observation_rows.append(article)
+
+    return aggregate_observed_articles(observation_rows)
+
+
+def safe_int(value: Any) -> int | None:
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def aggregate_observed_articles(observation_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in observation_rows:
+        grouped[build_dedup_key(row)].append(row)
+
+    articles: list[dict[str, Any]] = []
+    for rows in grouped.values():
+        preferred = rows[0]
+        for row in rows[1:]:
+            preferred = choose_preferred_article(preferred, row)
+
+        observation_times = [
+            parse_datetime_object(row.get("observation_time")) or resolve_article_time(row)
+            for row in rows
+        ]
+        valid_times = [value for value in observation_times if value is not None]
+        if valid_times:
+            first_seen_dt = min(valid_times)
+            last_seen_dt = max(valid_times)
+            active_hours = max(0.0, (last_seen_dt - first_seen_dt).total_seconds() / 3600)
+        else:
+            first_seen_dt = None
+            last_seen_dt = None
+            active_hours = 0.0
+
+        latest_rows = [
+            row
+            for row in rows
+            if (parse_datetime_object(row.get("observation_time")) or resolve_article_time(row)) == last_seen_dt
+        ]
+        latest_ranks = [
+            rank
+            for rank in (safe_int(row.get("observation_rank")) for row in latest_rows)
+            if rank is not None
+        ]
+
+        article = dict(preferred)
+        article["seen_count"] = len(rows)
+        article["first_seen"] = first_seen_dt.strftime("%Y-%m-%d %H:%M:%S %z") if first_seen_dt else None
+        article["last_seen"] = last_seen_dt.strftime("%Y-%m-%d %H:%M:%S %z") if last_seen_dt else None
+        article["active_hours"] = round(active_hours, 2)
+        article["unique_sources"] = len({normalize_text(row.get("source_name")) for row in rows if normalize_text(row.get("source_name"))})
+        article["source_count"] = article["unique_sources"]
+        article["latest_rank"] = min(latest_ranks) + 1 if latest_ranks else None
         articles.append(article)
 
+    articles.sort(
+        key=lambda article: resolve_article_time(article) or datetime.min.replace(tzinfo=ZoneInfo(TIMEZONE)),
+        reverse=True,
+    )
     return articles
 
 
@@ -482,9 +648,16 @@ def build_cluster_summaries(
         article_times = [resolve_article_time(article) or now_dt for article in cluster_articles]
         hours_diffs = [(now_dt - article_time).total_seconds() / 3600 for article_time in article_times]
         recency_score = sum(math.exp(-DECAY_LAMBDA * max(hours_diff, 0.0)) for hours_diff in hours_diffs)
-        total_articles = len(cluster_articles)
+        unique_articles = len(cluster_articles)
+        total_observations = sum(int(article.get("seen_count") or 1) for article in cluster_articles)
+        heat_observations = sum(
+            int(article.get("seen_count") or 1)
+            if normalize_text(article.get("source_type")) == "newsnow"
+            else 1
+            for article in cluster_articles
+        )
         unique_sources = len({normalize_text(article["source_name"]) for article in cluster_articles})
-        heat_score = total_articles + 0.75 * unique_sources + recency_score
+        heat_score = heat_observations + 0.75 * unique_sources + recency_score
         cluster_articles_sorted = sorted(
             cluster_articles,
             key=lambda article: resolve_article_time(article) or now_dt,
@@ -509,7 +682,9 @@ def build_cluster_summaries(
             {
                 "cluster_id": f"c_{cluster_number}",
                 "heat_score": round(heat_score, 4),
-                "total_articles": total_articles,
+                "total_articles": unique_articles,
+                "total_observations": total_observations,
+                "heat_observations": heat_observations,
                 "unique_sources": unique_sources,
                 "first_seen": min(article_times).strftime("%Y-%m-%d %H:%M:%S %z"),
                 "latest_seen": max(article_times).strftime("%Y-%m-%d %H:%M:%S %z"),
@@ -525,6 +700,12 @@ def build_cluster_summaries(
                         "published_at": article.get("published_at"),
                         "fetched_at": article.get("fetched_at"),
                         "resolved_time": article.get("resolved_time"),
+                        "first_seen": article.get("first_seen"),
+                        "last_seen": article.get("last_seen"),
+                        "seen_count": article.get("seen_count", 1),
+                        "active_hours": article.get("active_hours", 0.0),
+                        "latest_rank": article.get("latest_rank"),
+                        "source_count": article.get("source_count", 1),
                     }
                     for article in cluster_articles_sorted
                 ],
@@ -535,6 +716,7 @@ def build_cluster_summaries(
         key=lambda cluster: (
             -cluster["heat_score"],
             -cluster["unique_sources"],
+            -cluster["total_observations"],
             -cluster["total_articles"],
             cluster["cluster_id"],
         )
@@ -601,6 +783,7 @@ def run_pipeline_for_source_type(
     raw_articles = load_articles_from_sqlite(base_dir, source_type, window_hours, now_dt)
     if not raw_articles:
         raise RuntimeError(f"No recent {source_type} news items were loaded from SQLite.")
+    loaded_observations = sum(int(article.get("seen_count") or 1) for article in raw_articles)
 
     deduped_articles = deduplicate_articles(raw_articles)
     if not deduped_articles:
@@ -650,7 +833,8 @@ def run_pipeline_for_source_type(
         "similarity_threshold": float(config["similarity_threshold"]),
         "decay_lambda": DECAY_LAMBDA,
         "top_n_clusters": TOP_N_CLUSTERS,
-        "raw_articles": len(raw_articles),
+        "raw_articles": loaded_observations,
+        "unique_loaded_articles": len(raw_articles),
         "deduped_articles": len(deduped_articles),
         "quality_filtered_articles": len(filtered_articles),
         "event_scored_articles": event_scored_articles,

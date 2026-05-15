@@ -147,6 +147,13 @@ def item_from_row(row: dict[str, Any], keywords: list[str]) -> NewsSearchItem | 
     )
 
 
+def build_result_dedup_key(item: NewsSearchItem) -> str:
+    if item.url:
+        return f"{item.source_type}:url:{item.url}"
+    title = normalize_text(item.title).lower()
+    return f"{item.source_type}:title:{title}"
+
+
 def search_news(
     base_dir: str | Path,
     query: str,
@@ -197,4 +204,16 @@ def search_news(
             -pair[1].id,
         )
     )
-    return [item.to_dict() for _, item in items[:normalized_limit]]
+
+    deduped_items: list[NewsSearchItem] = []
+    seen_keys: set[str] = set()
+    for _, item in items:
+        dedup_key = build_result_dedup_key(item)
+        if dedup_key in seen_keys:
+            continue
+        seen_keys.add(dedup_key)
+        deduped_items.append(item)
+        if len(deduped_items) >= normalized_limit:
+            break
+
+    return [item.to_dict() for item in deduped_items]

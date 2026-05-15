@@ -66,6 +66,24 @@ def init_db(db_path: str | Path) -> None:
                 FOREIGN KEY (fetch_run_id) REFERENCES fetch_runs(id)
             );
 
+            CREATE TABLE IF NOT EXISTS news_item_observations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                news_item_id INTEGER NOT NULL,
+                fetch_run_id INTEGER,
+                source_type TEXT NOT NULL,
+                source_id TEXT,
+                source_name TEXT NOT NULL,
+                fetched_at TEXT NOT NULL,
+                published_at TEXT,
+                raw_file_path TEXT,
+                raw_source_index INTEGER,
+                raw_item_index INTEGER,
+                rank INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (news_item_id) REFERENCES news_items(id),
+                FOREIGN KEY (fetch_run_id) REFERENCES fetch_runs(id)
+            );
+
             CREATE INDEX IF NOT EXISTS idx_news_items_fetched_at
             ON news_items (fetched_at);
 
@@ -78,8 +96,23 @@ def init_db(db_path: str | Path) -> None:
             CREATE INDEX IF NOT EXISTS idx_news_items_normalized_title
             ON news_items (normalized_title);
 
+            CREATE INDEX IF NOT EXISTS idx_news_items_source_type_url
+            ON news_items (source_type, url);
+
+            CREATE INDEX IF NOT EXISTS idx_news_items_source_type_normalized_title
+            ON news_items (source_type, normalized_title);
+
             CREATE INDEX IF NOT EXISTS idx_news_items_content_fetch_status
             ON news_items (content_fetch_status);
+
+            CREATE INDEX IF NOT EXISTS idx_news_item_observations_news_item_id
+            ON news_item_observations (news_item_id);
+
+            CREATE INDEX IF NOT EXISTS idx_news_item_observations_fetched_at
+            ON news_item_observations (fetched_at);
+
+            CREATE INDEX IF NOT EXISTS idx_news_item_observations_source_type
+            ON news_item_observations (source_type);
             """
         )
         ensure_column(connection, "news_items", "raw_source_index", "raw_source_index INTEGER")
@@ -145,7 +178,56 @@ def get_previous_successful_run_finished_at(
 
 def insert_news_item(item: dict[str, Any], db_path: str | Path) -> int:
     with get_connection(db_path) as connection:
-        cursor = connection.execute(
+        news_item_id = upsert_news_item_in_connection(connection, item)
+        insert_news_item_observation_in_connection(connection, news_item_id, item)
+        return news_item_id
+
+
+def find_existing_news_item_id(
+    connection: sqlite3.Connection,
+    item: dict[str, Any],
+) -> int | None:
+    source_type = item["source_type"]
+    url = str(item.get("url") or "").strip()
+    normalized_title = str(item.get("normalized_title") or "").strip()
+
+    if url:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM news_items
+            WHERE source_type = ?
+              AND url = ?
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (source_type, url),
+        ).fetchone()
+    elif normalized_title:
+        row = connection.execute(
+            """
+            SELECT id
+            FROM news_items
+            WHERE source_type = ?
+              AND normalized_title = ?
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (source_type, normalized_title),
+        ).fetchone()
+    else:
+        row = None
+
+    if row is None:
+        return None
+    return int(row[0])
+
+
+def insert_news_item_in_connection(
+    connection: sqlite3.Connection,
+    item: dict[str, Any],
+) -> int:
+    cursor = connection.execute(
             """
             INSERT INTO news_items (
                 fetch_run_id,
@@ -191,63 +273,66 @@ def insert_news_item(item: dict[str, Any], db_path: str | Path) -> int:
                 item["created_at"],
             ),
         )
-        return int(cursor.lastrowid)
+    return int(cursor.lastrowid)
+
+
+def upsert_news_item_in_connection(
+    connection: sqlite3.Connection,
+    item: dict[str, Any],
+) -> int:
+    existing_id = find_existing_news_item_id(connection, item)
+    if existing_id is not None:
+        return existing_id
+    return insert_news_item_in_connection(connection, item)
+
+
+def insert_news_item_observation_in_connection(
+    connection: sqlite3.Connection,
+    news_item_id: int,
+    item: dict[str, Any],
+) -> int:
+    raw_item_index = item.get("raw_item_index")
+    cursor = connection.execute(
+        """
+        INSERT INTO news_item_observations (
+            news_item_id,
+            fetch_run_id,
+            source_type,
+            source_id,
+            source_name,
+            fetched_at,
+            published_at,
+            raw_file_path,
+            raw_source_index,
+            raw_item_index,
+            rank,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            news_item_id,
+            item.get("fetch_run_id"),
+            item["source_type"],
+            item.get("source_id"),
+            item["source_name"],
+            item["fetched_at"],
+            item.get("published_at"),
+            item.get("raw_file_path"),
+            item.get("raw_source_index"),
+            raw_item_index,
+            raw_item_index,
+            item["created_at"],
+        ),
+    )
+    return int(cursor.lastrowid)
 
 
 def bulk_insert_news_items(items: list[dict[str, Any]], db_path: str | Path) -> int:
     if not items:
         return 0
 
-    rows = [
-        (
-            item.get("fetch_run_id"),
-            item["source_type"],
-            item.get("source_id"),
-            item["source_name"],
-            item["title"],
-            item["url"],
-            item.get("summary"),
-            item.get("published_at"),
-            item["fetched_at"],
-            item.get("normalized_title"),
-            item.get("content"),
-            item.get("content_fetch_status", "pending"),
-            item.get("content_fetch_error"),
-            item.get("raw_file_path"),
-            item.get("raw_source_index"),
-            item.get("raw_item_index"),
-            item.get("category_hint"),
-            item.get("language"),
-            item["created_at"],
-        )
-        for item in items
-    ]
-
     with get_connection(db_path) as connection:
-        connection.executemany(
-            """
-            INSERT INTO news_items (
-                fetch_run_id,
-                source_type,
-                source_id,
-                source_name,
-                title,
-                url,
-                summary,
-                published_at,
-                fetched_at,
-                normalized_title,
-                content,
-                content_fetch_status,
-                content_fetch_error,
-                raw_file_path,
-                raw_source_index,
-                raw_item_index,
-                category_hint,
-                language,
-                created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            rows,
-        )
-        return len(rows)
+        for item in items:
+            news_item_id = upsert_news_item_in_connection(connection, item)
+            insert_news_item_observation_in_connection(connection, news_item_id, item)
+        return len(items)
