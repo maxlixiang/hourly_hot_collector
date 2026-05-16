@@ -33,6 +33,7 @@ RSS_SOURCES = [
     ("Foreign Policy", "https://foreignpolicy.com/feed/"),
     ("The Diplomat", "https://thediplomat.com/feed/"),
     ("CNN", "http://rss.cnn.com/rss/edition_world.rss"),
+    ("新华网", "http://rss.cnnewsnow.com/xinhua/world"),
 
 
 ]

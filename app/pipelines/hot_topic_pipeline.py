@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 TIMEZONE = "Asia/Shanghai"
 DB_FILE = "data/db/data_hub.db"
 DEFAULT_ANALYSIS_WINDOW_HOURS = 6
+COLLECTION_INTERVAL_HOURS = 1
 MODEL_NAME = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 DECAY_LAMBDA = 0.08
 TOP_N_CLUSTERS = 10
@@ -752,13 +753,16 @@ def build_data_coverage(
 
     earliest_time = min(valid_times)
     latest_time = max(valid_times)
-    actual_covered_hours = max(0.0, (window_end_dt - earliest_time).total_seconds() / 3600)
+    coverage_start_time = earliest_time - timedelta(hours=COLLECTION_INTERVAL_HOURS)
+    actual_covered_hours = max(0.0, (window_end_dt - coverage_start_time).total_seconds() / 3600)
     return {
         "requested_window_hours": requested_window_hours,
         "actual_covered_hours": round(min(actual_covered_hours, float(requested_window_hours)), 2),
         "coverage_complete": actual_covered_hours >= requested_window_hours * 0.95,
         "window_start_time": window_start_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
         "window_end_time": window_end_dt.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "coverage_start_time": coverage_start_time.strftime("%Y-%m-%d %H:%M:%S %z"),
+        "coverage_interval_hours": COLLECTION_INTERVAL_HOURS,
         "earliest_item_time": earliest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
         "latest_item_time": latest_time.strftime("%Y-%m-%d %H:%M:%S %z"),
     }
