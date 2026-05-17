@@ -3,6 +3,10 @@ RSS_SOURCE_POLICIES = {
         "article_reading": "rss_content",
         "reason": "RSS items include full text in content:encoded.",
     },
+    "https://moxie.foxnews.com/google-publisher/tech.xml": {
+        "article_reading": "rss_content",
+        "reason": "RSS items include full text in content:encoded.",
+    },
     "https://rss.nytimes.com/services/xml/rss/nyt/World.xml": {
         "article_reading": "disabled",
         "reason": "Direct article fetch returns 403; keep RSS for headline/summary discovery.",
