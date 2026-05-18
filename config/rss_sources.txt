@@ -5,42 +5,47 @@ RSS_SOURCES = [
     ("TechCrunch", "https://techcrunch.com/feed/"),
     ("Wired", "https://www.wired.com/feed/rss"),
     ("Engadget", "https://www.engadget.com/rss.xml"),
-    ("The Github Blog", "https://github.blog/feed/"),
+    ("The Github Blog", "https://rss.cnnewsnow.com/github/blog"),
     ("MacRumors", "https://feeds.macrumors.com/MacRumors-All"),
-    ("VentureBeat", "https://venturebeat.com/category/ai/feed/"),
     ("MIT Technology Review", "https://www.technologyreview.com/feed/"),
-    ("The WSJ - Tech", "https://feeds.content.dowjones.io/public/rss/RSSWSJD"),
+    ("The WSJ - Tech", "https://rss.cnnewsnow.com/technologyreview"),
     ("The Fox News - Tech", "https://moxie.foxnews.com/google-publisher/tech.xml"),
 
 
 
     # 财经
     ("CNBC Business", "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
-    ("Bloomberg Markets", "https://feeds.bloomberg.com/markets/news.rss"),
+    ("Bloomberg Markets", "https://rss.cnnewsnow.com/bloomberg/markets"),
     ("Financial Times", "https://www.ft.com/rss/home"),
     ("MarketWatch", "https://feeds.marketwatch.com/marketwatch/topstories/"),
-    ("The Economist - Finance", "https://www.economist.com/finance-and-economics/rss.xml"),
     ("The WSJ - MarketsMain", "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain"),
     ("The WSJ - Economy", "https://feeds.content.dowjones.io/public/rss/socialeconomyfeed"),
+    ("腾讯财经新闻", "https://rss.cnnewsnow.com/qq/finance"),
+
+  # 国内新闻
+
+    ("新浪国内新闻", "https://rss.cnnewsnow.com/sina/china"),
 
 
 
     # 地缘政治
     ("HuffPost World News", "https://www.huffpost.com/section/world-news/feed"),
     ("Los Angeles Times World Nation", "https://www.latimes.com/world-nation/rss2.0.xml"),
-    ("CNN Edition", "http://rss.cnn.com/rss/edition.rss"),
-    ("Yahoo Most Viewed", "https://news.yahoo.com/rss/mostviewed"),
+    ("Yahoo Latest", "https://news.yahoo.com/rss/latest"),
     ("Fox News World", "https://moxie.foxnews.com/google-publisher/world.xml"),
     ("BBC World", "https://feeds.bbci.co.uk/news/world/rss.xml"),
     ("NYT World", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
     ("Al Jazeera", "https://www.aljazeera.com/xml/rss/all.xml"),
     ("NYT US News", "https://rss.nytimes.com/services/xml/rss/nyt/US.xml"),
     ("The Guardian World", "https://www.theguardian.com/world/rss"),
-    ("Foreign Policy", "https://foreignpolicy.com/feed/"),
-    ("The Diplomat", "https://thediplomat.com/feed/"),
-    ("CNN", "http://rss.cnn.com/rss/edition_world.rss"),
+    ("Foreign Policy", "https://rss.cnnewsnow.com/foreignpolicy"),
+    ("The Diplomat", "https://rss.cnnewsnow.com/thediplomat"),
     ("新华网英文", "http://rss.cnnewsnow.com/xinhua/world"),
     ("The WSJ World", "https://feeds.content.dowjones.io/public/rss/RSSWorldNews"),
+    ("腾讯国际新闻", "https://rss.cnnewsnow.com/qq/world"),
+    ("新浪国际新闻", "https://rss.cnnewsnow.com/sina/world"),
+
+
 
 
 ]

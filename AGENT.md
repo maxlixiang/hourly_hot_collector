@@ -84,6 +84,7 @@ Preferred script entry points:
 - `scripts/run_llm_expert_writer.py`
 - `scripts/run_knowledge_ingest.py`
 - `scripts/run_knowledge_evolution.py`
+- `scripts/check_rss_health.py`
 - `scripts/run_agents.py`
 
 ## Module Responsibilities
@@ -93,6 +94,7 @@ Preferred script entry points:
 - `collector_common.py`: shared config, paths, time/text helpers, run status helpers.
 - `newsnow_collector.py`: NewsNow source fetching, markdown/raw/SQLite standardization.
 - `rss_collector.py`: RSS source loading, incremental filtering, markdown/raw/SQLite standardization.
+- `rss_health.py`: standalone RSS source health check. It fetches all configured RSS sources, flags sources that fail, have no parseable item dates, or have no updates within the stale threshold. Keep it outside the hourly collector loop; callers such as a future Telegram `/check` command should invoke this module or `scripts/check_rss_health.py`.
 
 Collector scheduling:
 
@@ -183,6 +185,7 @@ Important output locations:
 - `data/analysis/retrieved_context/`
 - `data/analysis/expert_reports/`
 - `data/analysis/llm_reports/`
+- `data/analysis/rss_health/`
 - `data/knowledge/processed/`
 - `data/knowledge/evolution/`
 - `data/agent/session_state.json`
@@ -494,6 +497,7 @@ documents.jsonl + chunks.jsonl
 - `scripts/run_llm_expert_writer.py`
 - `scripts/run_knowledge_ingest.py`
 - `scripts/run_knowledge_evolution.py`
+- `scripts/check_rss_health.py`
 - `scripts/run_agents.py`
 
 ## 模块职责
@@ -503,6 +507,7 @@ documents.jsonl + chunks.jsonl
 - `collector_common.py`：共享配置、路径、时间/文本工具、运行状态辅助函数。
 - `newsnow_collector.py`：NewsNow 抓取、Markdown/raw/SQLite 标准化。
 - `rss_collector.py`：RSS 源加载、增量过滤、Markdown/raw/SQLite 标准化。
+- `rss_health.py`：独立 RSS 源健康检查。它会抓取全部已配置 RSS 源，标记抓取失败、没有可解析发布时间、或超过阈值未更新的源。不要把它塞进每小时采集循环；未来 Telegram `/check` 可以调用这个模块或 `scripts/check_rss_health.py`。
 
 采集调度规则：
 
@@ -583,6 +588,7 @@ from app.tools.article_reader import read_article
 - `data/analysis/retrieved_context/`
 - `data/analysis/expert_reports/`
 - `data/analysis/llm_reports/`
+- `data/analysis/rss_health/`
 - `data/knowledge/processed/`
 - `data/knowledge/evolution/`
 - `data/agent/session_state.json`

@@ -167,10 +167,14 @@ def parse_datetime_value(value: Any) -> datetime | None:
     try:
         parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S %z")
     except ValueError:
+        normalized = text[:-1] + "+00:00" if text.endswith("Z") else text
         try:
-            parsed = parsedate_to_datetime(text)
-        except (TypeError, ValueError, IndexError, OverflowError):
-            return None
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            try:
+                parsed = parsedate_to_datetime(text)
+            except (TypeError, ValueError, IndexError, OverflowError):
+                return None
 
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=ZoneInfo(TIMEZONE))

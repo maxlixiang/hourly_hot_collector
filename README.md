@@ -32,6 +32,7 @@
 | `scripts/run_llm_expert_writer.py` | 调用 LLM 或 fallback，生成更自然的最终分析稿。 |
 | `scripts/run_knowledge_ingest.py` | 将 `data/knowledge/sources/**/*.txt` 入库为 documents/chunks JSONL。 |
 | `scripts/run_knowledge_evolution.py` | 生成知识库观点层和观点演化层。 |
+| `scripts/check_rss_health.py` | 检查 RSS 源是否可抓取、是否超过 3 天未更新，并输出健康报告。 |
 | `scripts/run_agents.py` | 新闻分析 Agent 对话入口。支持热点查询、来源整理、专家专题分析，并可自动调度前置流水线。 |
 
 根目录兼容入口：
@@ -180,6 +181,19 @@ python scripts/run_hot_pipeline.py
 
 - `data/hot/newsnow/newsnow_hot_clusters_*.json`
 - `data/hot/rss/rss_hot_clusters_*.json`
+
+### RSS 源健康检查
+
+RSS 源健康检查是独立工具，不会阻塞每小时采集。它会读取 `config/rss_sources.txt` 中的全部 RSS 源，抓取 feed，解析最新 `pubDate` / `published` / `updated`，并把超过 3 天未更新、抓取失败、无法解析时间的源标记出来：
+
+```bash
+python scripts/check_rss_health.py --stale-days 3
+```
+
+输出：
+
+- `data/analysis/rss_health/rss_health_*.json`
+- `data/analysis/rss_health/rss_health_*.md`
 
 ### 3. 构建热点上下文
 
